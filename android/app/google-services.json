@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "725655021325",
+    "project_id": "boldo-e1db4",
+    "storage_bucket": "boldo-e1db4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:725655021325:android:14d2585452361570193244",
+        "android_client_info": {
+          "package_name": "com.example.boldo_ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAg_6Sn5UGEFL4kSiy3YYfnASKCPFCPcNk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
