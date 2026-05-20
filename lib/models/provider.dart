@@ -7,7 +7,12 @@ class Provider {
   final double cancellationRate;
   final List<String> specializations;
   final bool availability;
-  final String locationArea;
+  final double distanceKm;
+  final double basePrice;
+  final String location;
+
+  // Getter for UI backward compatibility
+  String get locationArea => location;
 
   Provider({
     required this.providerId,
@@ -18,34 +23,40 @@ class Provider {
     required this.cancellationRate,
     required this.specializations,
     required this.availability,
-    required this.locationArea,
+    required this.distanceKm,
+    required this.basePrice,
+    required this.location,
   });
 
   factory Provider.fromJson(Map<String, dynamic> json, String id) {
     return Provider(
       providerId: id,
       name: json['name'] ?? '',
-      serviceType: json['service'] ?? json['service_type'] ?? '',
-      rating: (json['rating'] ?? 0).toDouble(),
-      reliabilityScore: (json['reliability_score'] ?? 100.0).toDouble(),
-      cancellationRate: (json['cancellation_rate'] ?? 0.0).toDouble(),
+      serviceType: json['serviceType'] ?? json['service_type'] ?? json['service'] ?? '',
+      rating: (json['rating'] ?? 0.0).toDouble(),
+      reliabilityScore: (json['reliabilityScore'] ?? json['reliability_score'] ?? 100.0).toDouble(),
+      cancellationRate: (json['cancellationRate'] ?? json['cancellation_rate'] ?? 0.0).toDouble(),
       specializations: List<String>.from(json['specializations'] ?? []),
       availability: json['availability'] ?? true,
-      locationArea: json['location_area'] ?? 'Unknown',
+      distanceKm: (json['distanceKm'] ?? json['distance_km'] ?? 1.0).toDouble(),
+      basePrice: (json['basePrice'] ?? json['base_price'] ?? 0.0).toDouble(),
+      location: json['location'] ?? json['location_area'] ?? 'Unknown',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': providerId,
+      'providerId': providerId,
       'name': name,
-      'service': serviceType,
+      'serviceType': serviceType,
       'rating': rating,
-      'reliability_score': reliabilityScore,
-      'cancellation_rate': cancellationRate,
+      'reliabilityScore': reliabilityScore,
+      'cancellationRate': cancellationRate,
       'specializations': specializations,
       'availability': availability,
-      'location_area': locationArea,
+      'distanceKm': distanceKm,
+      'basePrice': basePrice,
+      'location': location,
     };
   }
 }

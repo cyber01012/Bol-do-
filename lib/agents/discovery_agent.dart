@@ -44,7 +44,7 @@ class DiscoveryAgent {
     try {
       final snapshot = await _firestore
           .collection('providers')
-          .where('service', isEqualTo: dbService)
+          .where('serviceType', isEqualTo: dbService)
           .get();
 
       List<Provider> results = snapshot.docs
@@ -71,14 +71,16 @@ class DiscoveryAgent {
           finalOutcomes: 'Zero results',
         ));
       } else {
+        final providerPrices = results.map((p) => '${p.name} (Rs ${p.basePrice})').join(', ');
         await LoggingService.log(LogEntry(
           agent: 'Discovery Agent',
           workflowStage: 'provider-discovery',
-          decision: 'Found ${results.length} providers',
-          reasoning: 'Providers successfully matched criteria',
+          decision: 'Found ${results.length} active providers: $providerPrices',
+          reasoning: 'Providers successfully matched $dbService in ${intent.location} with pricing mentioned.',
           actionTaken: 'return_providers',
           severity: 'info',
           timestamp: DateTime.now(),
+          finalOutcomes: 'Discovered: ' + results.map((p) => '${p.name} - Price: Rs ${p.basePrice}').join(' | '),
         ));
       }
 
