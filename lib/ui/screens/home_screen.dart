@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -265,9 +266,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final themeCardBg = _isDarkMode ? const Color(0xFF121216) : Colors.white;
     final themeBorder = _isDarkMode ? const Color(0xFF232330) : const Color(0xFFE5E7EB);
 
-    final appTheme = _isDarkMode ? BolDoTheme.darkTheme : ThemeData.light(useMaterial3: true).copyWith(
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6366F1)),
-    );
+    final appTheme = _isDarkMode ? BolDoTheme.darkTheme : BolDoTheme.lightTheme;
 
     return Theme(
       data: appTheme,
@@ -352,26 +351,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Positioned(
                 top: -100,
                 left: -100,
-                child: Container(
-                  width: 300,
-                  height: 300,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFF8B5CF6).withOpacity(0.04),
-                    filters: [ImageFilter.blur(sigmaX: 100, sigmaY: 100)],
+                child: ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                  child: Container(
+                    width: 300,
+                    height: 300,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF8B5CF6).withOpacity(0.04),
+                    ),
                   ),
                 ),
               ),
               Positioned(
                 bottom: 200,
                 right: -100,
-                child: Container(
-                  width: 300,
-                  height: 300,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFFEC4899).withOpacity(0.04),
-                    filters: [ImageFilter.blur(sigmaX: 100, sigmaY: 100)],
+                child: ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                  child: Container(
+                    width: 300,
+                    height: 300,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFEC4899).withOpacity(0.04),
+                    ),
                   ),
                 ),
               ),

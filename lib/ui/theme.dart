@@ -52,4 +52,47 @@ class BolDoTheme {
       useMaterial3: true,
     );
   }
+
+  static ThemeData get lightTheme {
+    return ThemeData(
+      brightness: Brightness.light,
+      scaffoldBackgroundColor: const Color(0xFFF4F6F9),
+      primaryColor: const Color(0xFF6366F1),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF6366F1),
+        brightness: Brightness.light,
+      ),
+      cardTheme: CardTheme(
+        color: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: IconThemeData(color: Color(0xFF6366F1)),
+        titleTextStyle: TextStyle(
+          color: Color(0xFF1E2025),
+          fontSize: 20,
+          fontWeight: FontWeight.w900,
+          letterSpacing: -0.5,
+        ),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: Color(0xFF6366F1),
+        foregroundColor: Colors.white,
+      ),
+      textTheme: const TextTheme(
+        headlineLarge: TextStyle(color: Color(0xFF1E2025), fontSize: 32, fontWeight: FontWeight.bold),
+        headlineMedium: TextStyle(color: Color(0xFF1E2025), fontSize: 24, fontWeight: FontWeight.w600),
+        bodyLarge: TextStyle(color: Color(0xFF1E2025), fontSize: 16),
+        bodyMedium: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+      ),
+      useMaterial3: true,
+    );
+  }
 }
