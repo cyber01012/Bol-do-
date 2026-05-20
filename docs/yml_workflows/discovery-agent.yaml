@@ -1,0 +1,41 @@
+name: provider-discovery
+description: Find providers matching service and location criteria
+
+tool: firestore
+database: boldo-firebase
+credentials: FIREBASE_KEY
+
+query: |
+  collection: "providers"
+  where:
+    - service_type == {service_type}
+    - availability == true
+    - location_area CONTAINS {location}
+  orderBy: distance ASC
+  limit: 20
+
+inputs:
+  service_type:
+    type: string
+    description: Type of service requested
+  location:
+    type: string
+    description: User location
+
+outputs:
+  providers:
+    type: array
+    items:
+      provider_id: string
+      name: string
+      rating: float
+      distance_km: float
+      availability: boolean
+      specializations: array
+
+error_handling:
+  no_providers:
+    action: suggest_nearby_locations
+  
+  location_invalid:
+    action: ask_clarification

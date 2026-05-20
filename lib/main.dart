@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dev/mock_booking_seeder.dart';
+import 'dev/mock_provider_seeder.dart';
+import 'ui/theme.dart';
+import 'ui/screens/home_screen.dart';
+import 'ui/screens/ranking_logs_screen.dart';
+import 'ui/screens/provider_listing_screen.dart';
 
 import 'firebase_options.dart';
 
@@ -167,39 +174,14 @@ Future<void> runEntirePipeline() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  bool firebaseInitialized = false;
-  String? initError;
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    print("🔥 Firebase initialized successfully.");
-    firebaseInitialized = true;
-  } catch (e) {
-    print("❌ Firebase Initialization Error: $e");
-    initError = e.toString();
-  }
-
-  runApp(BolDoApp(
-    firebaseInitialized: firebaseInitialized,
-    firebaseInitError: initError,
-  ));
+  runApp(const MyApp());
 }
 
-class BolDoApp extends StatefulWidget {
-  final bool firebaseInitialized;
-  final String? firebaseInitError;
-
-  const BolDoApp({
-    super.key,
-    required this.firebaseInitialized,
-    this.firebaseInitError,
-  });
-
-  @override
-  State<BolDoApp> createState() => _BolDoAppState();
-}
+final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.dark);
 
 class _BolDoAppState extends State<BolDoApp> {
   String authStatus = "Initializing security protocols...";
@@ -240,75 +222,16 @@ class _BolDoAppState extends State<BolDoApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: "BolDo AI Orchestrator",
-      themeMode: ThemeMode.system,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.light,
-        primaryColor: const Color(0xFF6366F1),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6366F1),
-          brightness: Brightness.light,
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('BolDo AI'),
         ),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        primaryColor: const Color(0xFF8B5CF6),
-        scaffoldBackgroundColor: const Color(0xFF060608),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF8B5CF6),
-          secondary: Color(0xFFEC4899),
-          background: Color(0xFF060608),
-          surface: Color(0xFF0C0C0E),
-          onBackground: Colors.white,
-          onSurface: Colors.white,
-        ),
-        cardTheme: CardTheme(
-          color: const Color(0xFF16161C),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            side: const BorderSide(color: Color(0xFF232330), width: 1.5),
-            borderRadius: BorderRadius.circular(20),
+        body: const Center(
+          child: Text(
+            'Firebase Connected Successfully 🚀',
           ),
         ),
       ),
-      home: widget.firebaseInitialized
-          ? BookingScreen(
-              onRunRawPipeline: runEntirePipeline,
-            )
-          : Scaffold(
-              body: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Text(
-                    authStatus,
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            ),
-      routes: {
-        '/debug': (context) => const FirestoreDebugScreen(isDarkMode: true),
-        '/traces': (context) => const TraceLogsScreen(
-              sessionId: 'sess_2026_001',
-              isDarkMode: true,
-            ),
-        '/disputes': (context) => const DisputeScreen(
-              sessionId: 'sess_2026_001',
-              bookingId: 'book_sess_2026_001',
-              customerId: 'user_customer_999',
-              providerId: 'provider_001',
-              bookingStatus: 'confirmed',
-              isDarkMode: true,
-            ),
-        '/notifications': (context) => const NotificationScreen(
-              isDarkMode: true,
-              sessionId: 'sess_2026_001',
-              bookingId: 'book_sess_2026_001',
-            ),
-      },
     );
   }
 }

@@ -22,7 +22,6 @@ Challenge 2 — AI Service Orchestrator for Informal Economy
 - Intent Agent
 - Voice Agent
 
-
 ### Hard Agent
 - Ranking Agent
 
@@ -42,6 +41,7 @@ Challenge 2 — AI Service Orchestrator for Informal Economy
 
 ### Medium Agents
 - Follow-up Agent
+
 - Pricing Agent
 
 ### Hard Agent

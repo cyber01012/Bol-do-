@@ -1,0 +1,374 @@
+name: voice-agent
+description: |
+  Handle speech-to-text and text-to-speech for voice interaction
+  Supports Urdu, Roman Urdu, English, and mixed language input
+  Converts voice to text → processes through intent pipeline → returns voice response
+
+tool: voice_processing
+model: speech-to-text-v3
+
+workflow:
+
+  # Step 1: Capture and Process Voice Input
+  step_1_capture_audio:
+    type: speech_recognition
+    
+    config:
+      languages_supported:
+        - urdu (ur-PK)
+        - english (en-US)
+        - roman_urdu (ur-Latn)
+      
+      audio_processing:
+        noise_reduction: true
+        sample_rate: 16000
+        duration_max: 30s
+        silence_threshold: 0.5
+      
+      confidence_threshold: 0.65
+    
+    on_success:
+      next: step_2_detect_language
+    
+    on_failure:
+      action: request_repeat
+      message: "Could not understand audio. Please try again."
+      retry: true
+      max_retries: 2
+    
+    timeout: 15s
+
+  # Step 2: Detect Language
+  step_2_detect_language:
+    type: language_detection
+    
+    input:
+      transcribed_text: "{step_1_capture_audio.text}"
+    
+    output:
+      detected_language: string  # urdu|english|roman_urdu|mixed
+      confidence: float (0-1)
+    
+    on_success:
+      next: step_3_normalize_text
+    
+    timeout: 3s
+
+  # Step 3: Normalize Text
+  step_3_normalize_text:
+    type: text_normalization
+    
+    config:
+      fix_spelling_mistakes: true
+      expand_abbreviations: true
+      handle_slang: true
+      preserve_intent: true
+    
+    examples:
+      - "plmbr" → "plumber"
+      - "kal subah" → "tomorrow morning"
+      - "DHA" → "DHA Phase"
+      - "AC wali" → "AC technician"
+    
+    input:
+      raw_text: "{step_1_capture_audio.text}"
+      language: "{step_2_detect_language.detected_language}"
+    
+    output:
+      normalized_text: string
+      corrections_made: array
+    
+    on_success:
+      next: step_4_log_transcription
+    
+    timeout: 2s
+
+  # Step 4: Log Voice Input
+  step_4_log_transcription:
+    type: logging
+    
+    log_data:
+      agent: "Voice Agent"
+      workflow_stage: "speech_recognition"
+      decision: "Voice input captured and processed"
+      reasoning: |
+        Original: "{step_1_capture_audio.text}"
+        Normalized: "{step_3_normalize_text.normalized_text}"
+        Language: "{step_2_detect_language.detected_language}"
+        Confidence: "{step_2_detect_language.confidence}"
+      action_taken: "transcription_complete"
+      severity: "info"
+      timestamp: current_timestamp
+    
+    destination: firestore_collection("workflow_logs")
+    
+    on_success:
+      next: end_voice_input
+    
+    timeout: 2s
+
+  # Step 5: Generate Voice Response (After workflow complete)
+  step_5_generate_voice_response:
+    type: text_to_speech
+    
+    input:
+      response_text: "{workflow_output.response_message}"
+      language: "{step_2_detect_language.detected_language}"
+      tone: professional_friendly
+    
+    config:
+      languages_supported:
+        - urdu (female|male voice)
+        - english (female|male voice)
+      
+      speech_rate: normal
+      pitch: neutral
+      volume: 100%
+    
+    output:
+      audio_file: bytes
+      duration_seconds: float
+      generation_status: success|failure
+    
+    on_success:
+      action: play_audio
+      next: step_6_log_voice_output
+    
+    on_failure:
+      action: fallback_text_response
+      message: "Could not generate voice response"
+    
+    timeout: 5s
+
+  # Step 6: Log Voice Output
+  step_6_log_voice_output:
+    type: logging
+    
+    log_data:
+      agent: "Voice Agent"
+      workflow_stage: "voice_output"
+      decision: "Voice response generated"
+      reasoning: "TTS conversion successful"
+      action_taken: "generated_audio_response"
+      severity: "info"
+      timestamp: current_timestamp
+    
+    destination: firestore_collection("workflow_logs")
+    
+    on_success:
+      next: end_workflow_success
+    
+    timeout: 2s
+
+# Error Handling
+error_handling:
+  
+  speech_not_detected:
+    trigger: audio_duration < 1s OR confidence < 0.3
+    action: ask_user_to_speak_again
+    message: "Sorry, I didn't catch that. Please speak again."
+    retry: true
+    max_retries: 3
+  
+  unsupported_language:
+    trigger: detected_language NOT IN [urdu, english, roman_urdu]
+    action: request_english_or_urdu
+    message: "I only understand Urdu and English. Please try again."
+    fallback: switch_to_text_input
+  
+  tts_failure:
+    trigger: text_to_speech fails
+    action: fallback_text_response
+    message: "Could not generate voice response. Here's the text instead:"
+  
+  audio_quality_poor:
+    trigger: noise_level > threshold
+    action: request_quieter_environment
+    message: "Please try in a quieter place."
+    retry: true
+
+# Outputs
+outputs:
+  
+  transcribed_text:
+    type: string
+    description: Original transcribed text from speech
+  
+  normalized_text:
+    type: string
+    description: Cleaned and normalized text
+  
+  language_detected:
+    type: string
+    enum: [urdu, english, roman_urdu, mixed]
+  
+  language_confidence:
+    type: float
+    range: [0, 1]
+  
+  voice_response_audio:
+    type: bytes
+    description: Audio file of AI response
+  
+  voice_response_text:
+    type: string
+    description: Text of AI response
+  
+  processing_time_ms:
+    type: integer
+    description: Total time to process voice input
+
+# Logging Requirements
+logging:
+  
+  speech_recognition:
+    - audio_duration
+    - confidence_score
+    - detected_language
+    - original_text
+    - normalized_text
+    - corrections_made
+  
+  voice_output:
+    - response_text
+    - generation_status
+    - audio_duration
+    - voice_used (gender, language)
+  
+  errors:
+    - error_type
+    - error_message
+    - retry_attempts
+    - fallback_action
+  
+  performance:
+    - speech_recognition_time_ms
+    - normalization_time_ms
+    - tts_generation_time_ms
+    - total_processing_time_ms
+
+# Integration Points
+integrations:
+  
+  intent_agent:
+    input: normalized_text
+    receives: intent_extraction_result
+  
+  notifications:
+    input: response_text
+    output: voice_response_audio
+  
+  firebase:
+    collection: workflow_logs
+    read: past_interactions (for context)
+    write: voice_logs
+
+# Configuration
+config:
+  
+  speech_recognition:
+    engine: google_cloud_speech_to_text
+    model: latest
+    audio_encoding: LINEAR16
+    sample_rate: 16000
+    language_hint: ur-PK
+  
+  text_to_speech:
+    engine: google_cloud_text_to_speech
+    model: latest
+    voice_gender: FEMALE (customizable)
+    pitch: 0.0 (neutral)
+    speaking_rate: 1.0 (normal)
+  
+  caching:
+    cache_recognized_voices: true
+    cache_duration: 24h
+  
+  telemetry:
+    collect_accuracy_metrics: true
+    collect_user_feedback: true
+
+# Performance Targets
+sla:
+  
+  speech_recognition: < 3s
+  language_detection: < 1s
+  text_normalization: < 1s
+  text_to_speech: < 2s
+  total_latency: < 10s
+
+# Voice Agent Capabilities
+capabilities:
+  
+  multilingual:
+    - Urdu (Pakistan accent)
+    - English (UK/US accent)
+    - Roman Urdu (mixed script)
+    - Code-switching support
+  
+  audio_features:
+    - Noise filtering
+    - Echo cancellation
+    - Automatic gain control
+    - Speech enhancement
+  
+  text_features:
+    - Spell correction
+    - Slang normalization
+    - Abbreviation expansion
+    - Context awareness
+  
+  voice_features:
+    - Multiple voice options
+    - Customizable pitch/speed
+    - Emotional tone options
+    - Prosody control
+
+# Testing Scenarios
+test_cases:
+  
+  test_urdu_input:
+    input: "Kal subah plumber chahiye DHA mein"
+    expected_language: urdu
+    expected_normalized: "Tomorrow morning plumber needed DHA"
+  
+  test_roman_urdu_input:
+    input: "Mujhe AC technician chahiye kal"
+    expected_language: roman_urdu
+    expected_normalized: "I need AC technician tomorrow"
+  
+  test_english_input:
+    input: "I need an electrician today"
+    expected_language: english
+    expected_normalized: "I need electrician today"
+  
+  test_mixed_input:
+    input: "Mujhe plumber chahiye DHA mein today"
+    expected_language: mixed
+    expected_normalized: "I need plumber DHA today"
+  
+  test_misspelled_input:
+    input: "Plmbr chahiye kal subah"
+    expected_language: urdu
+    expected_normalized: "Plumber needed tomorrow morning"
+  
+  test_noisy_background:
+    input: "[audio with background noise]"
+    expected_action: noise_reduction_applied
+    expected_result: clear_speech_recognized
+  
+  test_silent_input:
+    input: "[no speech detected]"
+    expected_action: request_repeat
+    expected_message: "Could not understand audio. Please try again."
+
+# Voice Agent Tips
+notes: |
+  1. Voice input must be >= 1 second duration
+  2. Confidence > 0.65 for proceeding
+  3. Always normalize text before intent extraction
+  4. Support for Pakistani Urdu accent
+  5. Roman Urdu uses Latin script representation
+  6. Handle common abbreviations and slang
+  7. Generate conversational voice responses
+  8. Log all voice interactions for quality improvement

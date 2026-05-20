@@ -1,9 +1,8 @@
 # Tech Versions
 
-Flutter: 3.19.0
-Dart: 3.3.0
-Firebase Core: 2.27.0
-Cloud Firestore: 4.15.0
-Firebase Auth: 4.17.0
+Flutter: 3.19+
+Dart: 3.3+
+Firebase Core: latest stable
+Cloud Firestore: latest stable
 Gemini API: 1.5 Pro
 Android SDK: 36
