@@ -1,55 +1,112 @@
-# Miscellaneous
-*.class
+# ==============================
+# Flutter / Dart
+# ==============================
+
+.dart_tool/
+.packages
+.pub/
+.pub-cache/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter-plugins
+.metadata
+
+# Generated files
+*.lock
 *.log
-*.pyc
-*.swp
+*.tmp
+*.temp
+
+# ==============================
+# Android / Gradle
+# ==============================
+
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/key.properties
+
+# Android Studio
+*.iml
+.idea/
+
+# APKs
+*.apk
+*.aab
+
+# ==============================
+# iOS
+# ==============================
+
+ios/Flutter/.last_build_id
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# Xcode
+DerivedData/
+
+# ==============================
+# VS Code
+# ==============================
+
+.vscode/
+
+# ==============================
+# IntelliJ
+# ==============================
+
+*.ipr
+*.iws
+
+# ==============================
+# macOS / Linux / Windows
+# ==============================
+
 .DS_Store
-.atom/
-.buildlog/
-.history
+Thumbs.db
+*.swp
+
+# ==============================
+# Firebase Secrets
+# ==============================
+
+google-services.json
+GoogleService-Info.plist
+
+# ==============================
+# Firebase Generated
+# ==============================
+
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# ==============================
+# Environment Files
+# ==============================
+
+.env
+.env.local
+.env.production
+
+# ==============================
+# Misc
+# ==============================
+
+*.class
+*.pyc
+.history/
 .svn/
 migrate_working_dir/
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
+# ==============================
+# Keep Firebase Options
+# IMPORTANT:
+# DO NOT IGNORE THIS FILE
+# ==============================
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
-
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
-
-# Firebase / Flutter extra
-.metadata
-
-# VS Code optional
-.vscode/
-
-# Mac/Linux junk
-*.lock
-
-# Generated config
-android/local.properties
+#!lib/firebase_options.dart
