@@ -1,6 +1,6 @@
-# ==============================
+# ==========================================
 # Flutter / Dart
-# ==============================
+# ==========================================
 
 .dart_tool/
 .packages
@@ -9,20 +9,70 @@
 build/
 .flutter-plugins
 .flutter-plugins-dependencies
-.flutter-plugins
 .metadata
 
 # Generated files
-*.lock
 *.log
 *.tmp
 *.temp
 
-# ==============================
+# Dependency lock files
+pubspec.lock
+
+# ==========================================
+# Firebase
+# ==========================================
+
+# Firebase CLI
+.firebase/
+
+# Environment variables
+.env
+.env.*
+
+# Secret keys
+google-services.json
+GoogleService-Info.plist
+
+# ==========================================
 # Android / Gradle
-# ==============================
+# ==========================================
 
 android/.gradle/
 android/app/build/
 android/build/
 android/local.properties
+
+# Keystore files
+*.jks
+*.keystore
+
+# ==========================================
+# iOS
+# ==========================================
+
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# ==========================================
+# VS Code / Android Studio / IntelliJ
+# ==========================================
+
+.idea/
+*.iml
+.vscode/
+
+# ==========================================
+# macOS / Windows / Linux junk
+# ==========================================
+
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# Test / Coverage
+# ==========================================
+
+coverage/
