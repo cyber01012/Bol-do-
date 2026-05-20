@@ -52,9 +52,9 @@ class DiscoveryAgent {
           .where((p) {
             if (!p.availability) return false;
             if (intent.location.isNotEmpty && intent.location.toLowerCase() != 'unknown') {
-              // Simulating "location_area CONTAINS {location}"
-              return p.locationArea.toLowerCase().contains(intent.location.toLowerCase()) || 
-                     intent.location.toLowerCase().contains(p.locationArea.toLowerCase());
+              // Simulating "location CONTAINS {location}"
+              return p.location.toLowerCase().contains(intent.location.toLowerCase()) || 
+                     intent.location.toLowerCase().contains(p.location.toLowerCase());
             }
             return true;
           }).toList();

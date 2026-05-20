@@ -32,15 +32,15 @@ class Provider {
     return Provider(
       providerId: id,
       name: json['name'] ?? '',
-      serviceType: json['serviceType'] ?? json['service_type'] ?? json['service'] ?? '',
+      serviceType: json['serviceType'] ?? '',
       rating: (json['rating'] ?? 0.0).toDouble(),
-      reliabilityScore: (json['reliabilityScore'] ?? json['reliability_score'] ?? 100.0).toDouble(),
-      cancellationRate: (json['cancellationRate'] ?? json['cancellation_rate'] ?? 0.0).toDouble(),
+      reliabilityScore: (json['reliabilityScore'] ?? 100.0).toDouble(),
+      cancellationRate: (json['cancellationRate'] ?? 0.0).toDouble(),
       specializations: List<String>.from(json['specializations'] ?? []),
       availability: json['availability'] ?? true,
-      distanceKm: (json['distanceKm'] ?? json['distance_km'] ?? 1.0).toDouble(),
-      basePrice: (json['basePrice'] ?? json['base_price'] ?? 0.0).toDouble(),
-      location: json['location'] ?? json['location_area'] ?? 'Unknown',
+      distanceKm: (json['distanceKm'] ?? 1.0).toDouble(),
+      basePrice: (json['basePrice'] ?? 0.0).toDouble(),
+      location: json['location'] ?? 'Unknown',
     );
   }
 
