@@ -10,6 +10,7 @@ import '../widgets/glass_card.dart';
 import '../theme.dart';
 import 'provider_listing_screen.dart';
 import 'ranking_logs_screen.dart';
+import '../../main.dart';
 
 // Checked out screen imports for seamless navigation
 import '../../screens/booking/notification_screen.dart';
@@ -337,6 +338,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               onPressed: () {
                 setState(() {
                   _isDarkMode = !_isDarkMode;
+                  themeNotifier.value = _isDarkMode ? ThemeMode.dark : ThemeMode.light;
                 });
                 HapticFeedback.selectionClick();
               },

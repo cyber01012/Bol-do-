@@ -33,16 +33,25 @@ void main() async {
   runApp(const MyApp());
 }
 
+final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.dark);
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'BolDo AI',
-      theme: BolDoTheme.darkTheme,
-      home: const HomeScreen(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (_, currentMode, __) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'BolDo AI',
+          theme: BolDoTheme.lightTheme,
+          darkTheme: BolDoTheme.darkTheme,
+          themeMode: currentMode,
+          home: const HomeScreen(),
+        );
+      },
     );
   }
 }
