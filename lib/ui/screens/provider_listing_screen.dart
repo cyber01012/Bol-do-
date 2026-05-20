@@ -42,7 +42,7 @@ class ProviderListingScreen extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('providers')
-            .where('service', isEqualTo: normalizedService)
+            .where('serviceType', isEqualTo: normalizedService)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
