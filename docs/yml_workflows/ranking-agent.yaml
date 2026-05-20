@@ -1,0 +1,56 @@
+name: provider-ranking
+description: |
+  Rank providers using multi-factor scoring algorithm
+  Factors: distance (20%), rating (30%), reliability (25%), 
+           cancellation rate (15%), specialization (10%)
+
+tool: gemini
+model: gemini-1.5-pro
+
+logic: |
+  For each provider:
+    distance_score = 100 - (distance_km / max_distance * 100)
+    rating_score = (rating / 5.0) * 100
+    reliability_score = provider.reliability_score
+    cancellation_score = 100 - provider.cancellation_rate
+    specialization_score = match_specialization ? 100 : 70
+    
+    final_score = (
+      distance_score * 0.20 +
+      rating_score * 0.30 +
+      reliability_score * 0.25 +
+      cancellation_score * 0.15 +
+      specialization_score * 0.10
+    )
+  
+  Generate reasoning explaining why top provider is best choice
+
+inputs:
+  providers:
+    type: array
+    items:
+      provider_id: string
+      name: string
+      rating: float
+      distance_km: float
+      reliability_score: float
+      cancellation_rate: float
+      specializations: array
+  
+  requested_service:
+    type: string
+
+outputs:
+  ranked_providers:
+    type: array
+    items:
+      provider_id: string
+      name: string
+      score: float (0-100)
+      reasoning: string
+  
+  top_choice:
+    type: object
+    fields:
+      provider_id: string
+      reasoning: string

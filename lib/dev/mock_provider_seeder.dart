@@ -4,13 +4,14 @@ class MockProviderSeeder {
   static Future<void> seedOnce() async {
     final firestore = FirebaseFirestore.instance;
     final collection = firestore.collection('providers');
-
+    
     final providers = [
       {
         'id': 'prov1',
         'name': 'Ali Plumber',
         'service': 'Plumbing',
         'rating': 4.8,
+        'location_area': 'DHA Phase 5',
         'createdAt': FieldValue.serverTimestamp(),
       },
       {
@@ -18,6 +19,7 @@ class MockProviderSeeder {
         'name': 'Sara Electrician',
         'service': 'Electrical',
         'rating': 4.9,
+        'location_area': 'DHA',
         'createdAt': FieldValue.serverTimestamp(),
       },
       {
@@ -25,6 +27,7 @@ class MockProviderSeeder {
         'name': 'John Carpenter',
         'service': 'Carpentry',
         'rating': 4.7,
+        'location_area': 'Clifton',
         'createdAt': FieldValue.serverTimestamp(),
       },
       {
@@ -32,6 +35,7 @@ class MockProviderSeeder {
         'name': 'Ayesha Cleaner',
         'service': 'Cleaning',
         'rating': 5.0,
+        'location_area': 'Gulshan',
         'createdAt': FieldValue.serverTimestamp(),
       },
       {
@@ -39,6 +43,7 @@ class MockProviderSeeder {
         'name': 'Zain Painter',
         'service': 'Painting',
         'rating': 4.6,
+        'location_area': 'DHA Phase 6',
         'createdAt': FieldValue.serverTimestamp(),
       },
       {
@@ -46,6 +51,7 @@ class MockProviderSeeder {
         'name': 'Fatima AC Repair',
         'service': 'AC Repair',
         'rating': 4.9,
+        'location_area': 'Clifton',
         'createdAt': FieldValue.serverTimestamp(),
       },
       {
@@ -53,6 +59,7 @@ class MockProviderSeeder {
         'name': 'Bilal Handyman',
         'service': 'General',
         'rating': 4.5,
+        'location_area': 'Saddar',
         'createdAt': FieldValue.serverTimestamp(),
       },
       {
@@ -60,6 +67,7 @@ class MockProviderSeeder {
         'name': 'Hira Electrician',
         'service': 'Electrical',
         'rating': 4.8,
+        'location_area': 'Tariq Road',
         'createdAt': FieldValue.serverTimestamp(),
       },
       {
@@ -67,6 +75,7 @@ class MockProviderSeeder {
         'name': 'Omar Plumber',
         'service': 'Plumbing',
         'rating': 4.7,
+        'location_area': 'Gulshan',
         'createdAt': FieldValue.serverTimestamp(),
       },
       {
@@ -74,6 +83,7 @@ class MockProviderSeeder {
         'name': 'Sana Cleaner',
         'service': 'Cleaning',
         'rating': 4.9,
+        'location_area': 'DHA Phase 2',
         'createdAt': FieldValue.serverTimestamp(),
       },
       {
@@ -81,6 +91,7 @@ class MockProviderSeeder {
         'name': 'Tariq Carpenter',
         'service': 'Carpentry',
         'rating': 4.6,
+        'location_area': 'Clifton',
         'createdAt': FieldValue.serverTimestamp(),
       },
       {
@@ -88,6 +99,7 @@ class MockProviderSeeder {
         'name': 'Rabia Painter',
         'service': 'Painting',
         'rating': 4.8,
+        'location_area': 'DHA',
         'createdAt': FieldValue.serverTimestamp(),
       },
       {
@@ -95,6 +107,7 @@ class MockProviderSeeder {
         'name': 'Usman AC Repair',
         'service': 'AC Repair',
         'rating': 4.7,
+        'location_area': 'Gulshan',
         'createdAt': FieldValue.serverTimestamp(),
       },
       {
@@ -102,6 +115,7 @@ class MockProviderSeeder {
         'name': 'Nadia Handyman',
         'service': 'General',
         'rating': 4.8,
+        'location_area': 'Saddar',
         'createdAt': FieldValue.serverTimestamp(),
       },
       {
@@ -109,14 +123,134 @@ class MockProviderSeeder {
         'name': 'Aliya Plumber',
         'service': 'Plumbing',
         'rating': 4.9,
+        'location_area': 'Tariq Road',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov16',
+        'name': 'Kamil Plumber',
+        'service': 'Plumbing',
+        'rating': 4.5,
+        'location_area': 'Clifton',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov17',
+        'name': 'Raza Electrician',
+        'service': 'Electrical',
+        'rating': 4.7,
+        'location_area': 'DHA Phase 5',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov18',
+        'name': 'Basit Carpenter',
+        'service': 'Carpentry',
+        'rating': 4.8,
+        'location_area': 'Gulshan',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov19',
+        'name': 'Noman Cleaner',
+        'service': 'Cleaning',
+        'rating': 4.6,
+        'location_area': 'Saddar',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov20',
+        'name': 'Farhan Painter',
+        'service': 'Painting',
+        'rating': 4.9,
+        'location_area': 'Tariq Road',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov21',
+        'name': 'Yasir AC Repair',
+        'service': 'AC Repair',
+        'rating': 4.8,
+        'location_area': 'DHA',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov22',
+        'name': 'Asad Plumber',
+        'service': 'Plumbing',
+        'rating': 4.6,
+        'location_area': 'DHA Phase 6',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov23',
+        'name': 'Sameer Electrician',
+        'service': 'Electrical',
+        'rating': 4.9,
+        'location_area': 'Gulshan',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov24',
+        'name': 'Waqas Carpenter',
+        'service': 'Carpentry',
+        'rating': 4.5,
+        'location_area': 'Saddar',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov25',
+        'name': 'Tahira Cleaner',
+        'service': 'Cleaning',
+        'rating': 4.7,
+        'location_area': 'Clifton',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov26',
+        'name': 'Shakir Painter',
+        'service': 'Painting',
+        'rating': 4.8,
+        'location_area': 'Gulshan',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov27',
+        'name': 'Zeeshan AC Repair',
+        'service': 'AC Repair',
+        'rating': 4.9,
+        'location_area': 'PECHS',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov28',
+        'name': 'Imran Plumber',
+        'service': 'Plumbing',
+        'rating': 4.7,
+        'location_area': 'PECHS',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov29',
+        'name': 'Fahad Electrician',
+        'service': 'Electrical',
+        'rating': 4.8,
+        'location_area': 'PECHS',
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+      {
+        'id': 'prov30',
+        'name': 'Farida Cleaner',
+        'service': 'Cleaning',
+        'rating': 4.6,
+        'location_area': 'PECHS',
         'createdAt': FieldValue.serverTimestamp(),
       }
     ];
 
     for (final provider in providers) {
-      // Using .set() will overwrite existing ones with the same ID or create new ones
       await collection.doc(provider['id'] as String).set(provider);
     }
-    print('Successfully seeded 15 providers.');
+    print('Successfully seeded 30 providers with locations.');
   }
 }

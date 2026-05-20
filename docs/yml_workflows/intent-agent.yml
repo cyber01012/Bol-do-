@@ -1,0 +1,46 @@
+name: intent-extraction
+description: |
+  Extract user intent from voice/text input
+  Supports Urdu, Roman Urdu, English, mixed language
+
+tool: gemini
+model: gemini-1.5-pro
+credentials: GEMINI_API_KEY
+
+prompt: |
+  Extract user booking intent from this input (may be Urdu/English/Roman Urdu):
+  
+  User input: "{user_input}"
+  
+  Return ONLY valid JSON (no markdown):
+  {
+    "service_type": "plumber|electrician|painter|carpenter|cleaner|appliance_repair|ac_technician",
+    "location": "extracted location or area",
+    "preferred_time": "today|tomorrow|next_week|next_month",
+    "urgency": "high|medium|low",
+    "budget": "low|medium|high",
+    "confidence_score": 0.0 to 1.0,
+    "language_detected": "urdu|english|roman_urdu|mixed"
+  }
+
+inputs:
+  user_input:
+    type: string
+    description: User voice input (transcribed) or text
+
+outputs:
+  service_type:
+    type: string
+  location:
+    type: string
+  urgency:
+    type: string
+  confidence_score:
+    type: float
+  language_detected:
+    type: string
+
+error_handling:
+  low_confidence:
+    threshold: 0.65
+    action: ask_clarification
