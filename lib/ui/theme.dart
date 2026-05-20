@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class BolDoTheme {
   static const Color background = Color(0xFF060608);
@@ -9,10 +10,12 @@ class BolDoTheme {
   static const Color textSecondary = Color(0xFF9EA3B0);
 
   static ThemeData get darkTheme {
+    final baseTheme = ThemeData.dark(useMaterial3: true);
     return ThemeData(
       brightness: Brightness.dark,
       scaffoldBackgroundColor: background,
       primaryColor: primary,
+      fontFamily: GoogleFonts.poppins().fontFamily,
       colorScheme: const ColorScheme.dark(
         primary: primary,
         secondary: secondary,
@@ -27,12 +30,12 @@ class BolDoTheme {
           borderRadius: BorderRadius.circular(20),
         ),
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: background,
         elevation: 0,
         centerTitle: true,
-        iconTheme: IconThemeData(color: primary),
-        titleTextStyle: TextStyle(
+        iconTheme: const IconThemeData(color: primary),
+        titleTextStyle: GoogleFonts.poppins(
           color: textPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w900,
@@ -43,21 +46,23 @@ class BolDoTheme {
         backgroundColor: primary,
         foregroundColor: Colors.white,
       ),
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(color: textPrimary, fontSize: 32, fontWeight: FontWeight.bold),
-        headlineMedium: TextStyle(color: textPrimary, fontSize: 24, fontWeight: FontWeight.w600),
-        bodyLarge: TextStyle(color: textPrimary, fontSize: 16),
-        bodyMedium: TextStyle(color: textSecondary, fontSize: 14),
+      textTheme: GoogleFonts.poppinsTextTheme(baseTheme.textTheme).copyWith(
+        headlineLarge: GoogleFonts.poppins(color: textPrimary, fontSize: 32, fontWeight: FontWeight.bold),
+        headlineMedium: GoogleFonts.poppins(color: textPrimary, fontSize: 24, fontWeight: FontWeight.w600),
+        bodyLarge: GoogleFonts.poppins(color: textPrimary, fontSize: 16),
+        bodyMedium: GoogleFonts.poppins(color: textSecondary, fontSize: 14),
       ),
       useMaterial3: true,
     );
   }
 
   static ThemeData get lightTheme {
+    final baseTheme = ThemeData.light(useMaterial3: true);
     return ThemeData(
       brightness: Brightness.light,
       scaffoldBackgroundColor: const Color(0xFFF4F6F9),
       primaryColor: const Color(0xFF6366F1),
+      fontFamily: GoogleFonts.poppins().fontFamily,
       colorScheme: ColorScheme.fromSeed(
         seedColor: const Color(0xFF6366F1),
         brightness: Brightness.light,
@@ -70,13 +75,13 @@ class BolDoTheme {
           borderRadius: BorderRadius.circular(20),
         ),
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        iconTheme: IconThemeData(color: Color(0xFF6366F1)),
-        titleTextStyle: TextStyle(
-          color: Color(0xFF1E2025),
+        iconTheme: const IconThemeData(color: Color(0xFF6366F1)),
+        titleTextStyle: GoogleFonts.poppins(
+          color: const Color(0xFF1E2025),
           fontSize: 20,
           fontWeight: FontWeight.w900,
           letterSpacing: -0.5,
@@ -86,11 +91,11 @@ class BolDoTheme {
         backgroundColor: Color(0xFF6366F1),
         foregroundColor: Colors.white,
       ),
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(color: Color(0xFF1E2025), fontSize: 32, fontWeight: FontWeight.bold),
-        headlineMedium: TextStyle(color: Color(0xFF1E2025), fontSize: 24, fontWeight: FontWeight.w600),
-        bodyLarge: TextStyle(color: Color(0xFF1E2025), fontSize: 16),
-        bodyMedium: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+      textTheme: GoogleFonts.poppinsTextTheme(baseTheme.textTheme).copyWith(
+        headlineLarge: GoogleFonts.poppins(color: const Color(0xFF1E2025), fontSize: 32, fontWeight: FontWeight.bold),
+        headlineMedium: GoogleFonts.poppins(color: const Color(0xFF1E2025), fontSize: 24, fontWeight: FontWeight.w600),
+        bodyLarge: GoogleFonts.poppins(color: const Color(0xFF1E2025), fontSize: 16),
+        bodyMedium: GoogleFonts.poppins(color: const Color(0xFF6B7280), fontSize: 14),
       ),
       useMaterial3: true,
     );

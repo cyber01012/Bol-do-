@@ -5,20 +5,13 @@ import '../models/provider.dart';
 import '../models/ranking_output.dart';
 import '../models/log_entry.dart';
 import '../services/logging_service.dart';
+import '../utils/gemini_key_rotator.dart';
 
 class RankingAgent {
+  static const int _maxRetries = 3;
+
   Future<RankingOutput?> rankProviders(List<Provider> providers, String requestedService) async {
     if (providers.isEmpty) return null;
-
-    final apiKey = dotenv.env['GEMINI_API_KEY'];
-    if (apiKey == null || apiKey.isEmpty) {
-      throw Exception('GEMINI_API_KEY is not set in .env file.');
-    }
-
-    final model = GenerativeModel(
-      model: 'gemini-2.5-flash',
-      apiKey: apiKey,
-    );
 
     // Serialize providers to send to prompt
     final providersJson = jsonEncode(providers.map((p) => p.toJson()).toList());
@@ -66,40 +59,71 @@ Return ONLY a valid JSON object matching the following structure (no markdown co
       timestamp: DateTime.now(),
     ));
 
-    try {
-      final response = await model.generateContent([Content.text(prompt)]);
-      
-      if (response.text == null || response.text!.isEmpty) {
-        throw Exception('Empty response from model');
+    int retryCount = 0;
+    String? errorRecoveryInfo;
+
+    while (retryCount < _maxRetries) {
+      final apiKey = GeminiKeyRotator.instance.getNextKey();
+      final model = GenerativeModel(
+        model: 'gemini-2.5-flash',
+        apiKey: apiKey,
+      );
+
+      try {
+        final response = await model.generateContent([Content.text(prompt)]);
+        
+        if (response.text == null || response.text!.isEmpty) {
+          throw Exception('Empty response from model');
+        }
+
+        String cleanJson = response.text!.replaceAll('```json', '').replaceAll('```', '').trim();
+        final Map<String, dynamic> jsonResult = jsonDecode(cleanJson);
+        final rankingOutput = RankingOutput.fromJson(jsonResult);
+
+        await LoggingService.log(LogEntry(
+          agent: 'Ranking Agent',
+          workflowStage: 'provider-ranking',
+          decision: 'Successfully ranked providers',
+          reasoning: 'Top choice: ${rankingOutput.topChoice?.name}',
+          actionTaken: 'ranking_complete',
+          severity: 'info',
+          timestamp: DateTime.now(),
+          errorRecovery: errorRecoveryInfo,
+          finalOutcomes: rankingOutput.topChoice?.reasoning,
+        ));
+
+        return rankingOutput;
+      } catch (e) {
+        retryCount++;
+        final sanitizedError = GeminiKeyRotator.instance.sanitizeLog(e.toString());
+        errorRecoveryInfo = 'Retried $retryCount times due to error: $sanitizedError';
+
+        await LoggingService.log(LogEntry(
+          agent: 'Ranking Agent',
+          workflowStage: 'provider-ranking',
+          decision: 'Ranking failed, attempting retry',
+          reasoning: sanitizedError,
+          actionTaken: 'retry_$retryCount',
+          severity: 'warning',
+          timestamp: DateTime.now(),
+        ));
+
+        if (retryCount >= _maxRetries) {
+          await LoggingService.log(LogEntry(
+            agent: 'Ranking Agent',
+            workflowStage: 'provider-ranking',
+            decision: 'Ranking completely failed',
+            reasoning: 'Max retries reached: $sanitizedError',
+            actionTaken: 'error_handling',
+            severity: 'critical',
+            timestamp: DateTime.now(),
+          ));
+          throw Exception('Failed to rank providers after $_maxRetries attempts: $sanitizedError');
+        }
+
+        await Future.delayed(Duration(seconds: 2 * retryCount));
       }
-
-      String cleanJson = response.text!.replaceAll('```json', '').replaceAll('```', '').trim();
-      final Map<String, dynamic> jsonResult = jsonDecode(cleanJson);
-      final rankingOutput = RankingOutput.fromJson(jsonResult);
-
-      await LoggingService.log(LogEntry(
-        agent: 'Ranking Agent',
-        workflowStage: 'provider-ranking',
-        decision: 'Successfully ranked providers',
-        reasoning: 'Top choice: ${rankingOutput.topChoice?.name}',
-        actionTaken: 'ranking_complete',
-        severity: 'info',
-        timestamp: DateTime.now(),
-        finalOutcomes: rankingOutput.topChoice?.reasoning,
-      ));
-
-      return rankingOutput;
-    } catch (e) {
-      await LoggingService.log(LogEntry(
-        agent: 'Ranking Agent',
-        workflowStage: 'provider-ranking',
-        decision: 'Ranking failed',
-        reasoning: e.toString(),
-        actionTaken: 'error_handling',
-        severity: 'critical',
-        timestamp: DateTime.now(),
-      ));
-      return null;
     }
+    return null;
   }
 }

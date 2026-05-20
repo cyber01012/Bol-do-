@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../models/provider.dart';
 import '../theme.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/boldo_app_bar.dart';
+import '../widgets/boldo_bottom_bar.dart';
+import '../../main.dart';
 
 class ProviderDetailScreen extends StatelessWidget {
   final Provider provider;
@@ -16,9 +19,8 @@ class ProviderDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(provider.name),
-      ),
+      extendBody: true,
+      appBar: const BolDoAppBar(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -197,6 +199,7 @@ class ProviderDetailScreen extends StatelessWidget {
           ],
         ),
       ),
+      bottomNavigationBar: const BolDoBottomBar(isHome: false),
     );
   }
 

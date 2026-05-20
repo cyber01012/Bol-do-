@@ -3,6 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../theme.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/boldo_app_bar.dart';
+import '../widgets/boldo_bottom_bar.dart';
+import '../../main.dart';
 
 class RankingLogsScreen extends StatelessWidget {
   const RankingLogsScreen({super.key});
@@ -10,9 +13,8 @@ class RankingLogsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI Agent Logs Dashboard'),
-      ),
+      extendBody: true,
+      appBar: const BolDoAppBar(),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('workflow_logs')
@@ -203,6 +205,7 @@ class RankingLogsScreen extends StatelessWidget {
           );
         },
       ),
+      bottomNavigationBar: const BolDoBottomBar(isHome: false),
     );
   }
 }

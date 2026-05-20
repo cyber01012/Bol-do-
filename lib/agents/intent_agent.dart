@@ -4,21 +4,13 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import '../models/intent_output.dart';
 import '../models/log_entry.dart';
 import '../services/logging_service.dart';
+import '../utils/gemini_key_rotator.dart';
 
 class IntentAgent {
   static const int _maxRetries = 3;
   static const double _clarificationThreshold = 0.65;
 
   Future<IntentOutput?> processInput(String userInput) async {
-    final apiKey = dotenv.env['GEMINI_API_KEY'];
-    if (apiKey == null || apiKey.isEmpty) {
-      throw Exception('GEMINI_API_KEY is not set in .env file.');
-    }
-
-    final model = GenerativeModel(
-      model: 'gemini-2.5-flash',
-      apiKey: apiKey,
-    );
 
     final prompt = '''
 Extract user booking intent from this input. The input can be in English, Urdu (Perso-Arabic script), Roman Urdu (English alphabet phonetic Urdu), or a mix of these.
@@ -53,6 +45,12 @@ Analyze the request and return ONLY a valid JSON object matching the following s
     ));
 
     while (retryCount < _maxRetries) {
+      final apiKey = GeminiKeyRotator.instance.getNextKey();
+      final model = GenerativeModel(
+        model: 'gemini-2.5-flash',
+        apiKey: apiKey,
+      );
+
       try {
         final content = [Content.text(prompt)];
         final response = await model.generateContent(content);
@@ -101,13 +99,14 @@ Analyze the request and return ONLY a valid JSON object matching the following s
 
       } catch (e) {
         retryCount++;
-        errorRecoveryInfo = 'Retried $retryCount times due to error: $e';
+        final sanitizedError = GeminiKeyRotator.instance.sanitizeLog(e.toString());
+        errorRecoveryInfo = 'Retried $retryCount times due to error: $sanitizedError';
         
         await LoggingService.log(LogEntry(
           agent: 'Intent Agent',
           workflowStage: 'intent-extraction',
           decision: 'API call failed, attempting retry',
-          reasoning: e.toString(),
+          reasoning: sanitizedError,
           actionTaken: 'retry_$retryCount',
           severity: 'warning',
           timestamp: DateTime.now(),
@@ -127,7 +126,7 @@ Analyze the request and return ONLY a valid JSON object matching the following s
             errorRecovery: errorRecoveryInfo,
             finalOutcomes: 'Workflow failed',
           ));
-          throw Exception('Failed to extract intent after $_maxRetries attempts: $e');
+          throw Exception('Failed to extract intent after $_maxRetries attempts: $sanitizedError');
         }
         
         // Wait before retrying (exponential backoff)
