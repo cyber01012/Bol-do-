@@ -60,37 +60,33 @@ class DiscoveryAgent {
           }).toList();
 
       if (results.isEmpty) {
-        // Fallback: Get all available providers of this service type regardless of location
-        List<Provider> allAvailable = snapshot.docs
+        final allOfThisService = snapshot.docs
             .map((doc) => Provider.fromJson(doc.data(), doc.id))
-            .where((p) => p.availability)
             .toList();
+        
+        final otherLocations = allOfThisService
+            .where((p) => p.availability)
+            .map((p) => p.location)
+            .toSet()
+            .join(', ');
 
-        if (allAvailable.isNotEmpty) {
-          results = allAvailable;
-          final providerPrices = results.map((p) => '${p.name} (Rs ${p.basePrice} in ${p.location})').join(', ');
-          await LoggingService.log(LogEntry(
-            agent: 'Discovery Agent',
-            workflowStage: 'provider-discovery',
-            decision: 'Fell back to other locations: $providerPrices',
-            reasoning: 'No providers found in exact location "${intent.location}". Suggested available alternatives in other areas.',
-            actionTaken: 'suggest_nearby_locations',
-            severity: 'info',
-            timestamp: DateTime.now(),
-            finalOutcomes: 'Suggested fallback providers from nearby locations.',
-          ));
+        String reasoningMsg = 'No available $dbService providers are registered in "${intent.location}".';
+        if (otherLocations.isNotEmpty) {
+          reasoningMsg += ' Active $dbService providers were found in other areas ($otherLocations), but these do not match the requested nearby location filter.';
         } else {
-          await LoggingService.log(LogEntry(
-            agent: 'Discovery Agent',
-            workflowStage: 'provider-discovery',
-            decision: 'No providers found',
-            reasoning: 'Firestore returned 0 matching providers for $dbService anywhere',
-            actionTaken: 'suggest_nearby_locations',
-            severity: 'warning',
-            timestamp: DateTime.now(),
-            finalOutcomes: 'Zero results',
-          ));
+          reasoningMsg += ' There are no active $dbService providers currently online in any area.';
         }
+
+        await LoggingService.log(LogEntry(
+          agent: 'Discovery Agent',
+          workflowStage: 'provider-discovery',
+          decision: 'No matching providers found in "${intent.location}"',
+          reasoning: reasoningMsg,
+          actionTaken: 'filter_by_location_failed',
+          severity: 'warning',
+          timestamp: DateTime.now(),
+          finalOutcomes: 'Returned 0 matching nearby providers.',
+        ));
       } else {
         final providerPrices = results.map((p) => '${p.name} (Rs ${p.basePrice})').join(', ');
         await LoggingService.log(LogEntry(
