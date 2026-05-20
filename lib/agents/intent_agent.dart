@@ -21,19 +21,20 @@ class IntentAgent {
     );
 
     final prompt = '''
-Extract user booking intent from this input (may be Urdu/English/Roman Urdu):
+Extract user booking intent from this input. The input can be in English, Urdu (Perso-Arabic script), Roman Urdu (English alphabet phonetic Urdu), or a mix of these.
 
 User input: "$userInput"
 
-Return ONLY valid JSON (no markdown):
+Analyze the request and return ONLY a valid JSON object matching the following structure (no markdown code blocks, just raw JSON):
 {
   "service_type": "plumber|electrician|painter|carpenter|cleaner|appliance_repair|ac_technician",
-  "location": "extracted location or area",
+  "location": "extracted location or area (e.g. DHA, Clifton, Gulshan, PECHS, Saddar, etc. Default to 'unknown' if not mentioned)",
   "preferred_time": "today|tomorrow|next_week|next_month",
   "urgency": "high|medium|low",
   "budget": "low|medium|high",
   "confidence_score": 0.0 to 1.0,
-  "language_detected": "urdu|english|roman_urdu|mixed"
+  "language_detected": "urdu|english|roman_urdu|mixed",
+  "type": "the extracted type of service requested (e.g. Plumbing, Electrical, Painting, Carpentry, Cleaning, AC Repair)"
 }
 ''';
 

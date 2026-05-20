@@ -29,29 +29,29 @@ Rank the following providers for the requested service: "$requestedService"
 Providers:
 $providersJson
 
-Scoring logic:
-1. Rating (30%)
-2. Reliability (25%)
-3. Cancellation Rate (lower is better) (15%)
-4. Specialization match (10%)
-5. Distance (20%) (Assume distance is random between 1-10km for this mock if not provided)
+Scoring and ranking criteria:
+1. Distance (closer providers should rank much higher)
+2. Availability (providers must be available; unavailable ones should be filtered out or ranked at the bottom)
+3. Rating (higher rating is highly preferred)
 
-Generate reasoning explaining why the top provider is the best choice.
-Return ONLY valid JSON (no markdown):
+Please generate a clear, simple reasoning explaining why the selected best provider is the top choice.
+The explanation must be in extremely simple, friendly, easy-to-understand terms for a regular customer (e.g. "Ali is the closest plumber to you, only 2.3km away, and has an amazing 4.8 rating!").
+
+Return ONLY a valid JSON object matching the following structure (no markdown code blocks, just raw JSON):
 {
   "ranked_providers": [
     {
       "provider_id": "id",
       "name": "name",
       "score": 85.5,
-      "reasoning": "reasoning here"
+      "reasoning": "A simple 1-sentence explanation of why this provider is ranked here based on distance, availability, and rating."
     }
   ],
   "top_choice": {
     "provider_id": "id",
     "name": "name",
-    "score": 85.5,
-    "reasoning": "Overall best because..."
+    "score": 95.0,
+    "reasoning": "A simple, friendly, clear customer explanation of why they are the absolute best choice."
   }
 }
 ''';

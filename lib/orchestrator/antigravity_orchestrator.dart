@@ -57,8 +57,27 @@ class AntigravityOrchestrator {
     }
 
     final topProvider = rankingOutput.topChoice!;
+
+    // Step 4: Downstream Pricing Agent Preparation (docs/agents/pricing-agent.md)
+    final matchedProviderObj = providers.firstWhere((p) => p.providerId == topProvider.providerId, orElse: () => providers.first);
+    final pricingPayload = {
+      "service_type": intent.serviceType,
+      "distance_km": matchedProviderObj.distanceKm,
+      "urgency": intent.urgency.isNotEmpty ? intent.urgency : "medium"
+    };
+
+    await LoggingService.log(LogEntry(
+      agent: 'Pricing Agent Linker',
+      workflowStage: 'pricing-preparation',
+      decision: 'Prepared Pricing Agent payload: $pricingPayload',
+      reasoning: 'Ready for dynamic pricing calculations using basePrice: Rs ${matchedProviderObj.basePrice}',
+      actionTaken: 'pricing_payload_ready',
+      severity: 'info',
+      timestamp: DateTime.now(),
+      finalOutcomes: 'Downstream Pricing Agent inputs prepared',
+    ));
     
-    // Step 4: Final Output
+    // Step 5: Final Output
     final responseMsg = "I found a great match for you! ${topProvider.name} is highly rated. ${topProvider.reasoning}";
     await _voiceAgent.speak(responseMsg);
 
@@ -66,7 +85,7 @@ class AntigravityOrchestrator {
       agent: 'Antigravity Orchestrator',
       workflowStage: 'orchestration-end',
       decision: 'Pipeline complete',
-      reasoning: 'Successfully found and ranked provider',
+      reasoning: 'Successfully found, ranked provider and prepared dynamic pricing details.',
       actionTaken: 'end',
       severity: 'info',
       timestamp: DateTime.now(),

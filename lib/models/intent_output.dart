@@ -6,6 +6,7 @@ class IntentOutput {
   final String budgetPreference;
   final double confidenceScore;
   final String languageDetected;
+  final String type;
 
   IntentOutput({
     required this.serviceType,
@@ -15,6 +16,7 @@ class IntentOutput {
     required this.budgetPreference,
     required this.confidenceScore,
     required this.languageDetected,
+    required this.type,
   });
 
   factory IntentOutput.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class IntentOutput {
       budgetPreference: json['budget'] ?? json['budget_preference'] ?? '',
       confidenceScore: (json['confidence_score'] ?? 0).toDouble(),
       languageDetected: json['language_detected'] ?? '',
+      type: json['type'] ?? json['service_type'] ?? '',
     );
   }
 
@@ -38,6 +41,7 @@ class IntentOutput {
       'budget_preference': budgetPreference,
       'confidence_score': confidenceScore,
       'language_detected': languageDetected,
+      'type': type,
     };
   }
 }
