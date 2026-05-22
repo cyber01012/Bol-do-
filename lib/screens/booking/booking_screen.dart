@@ -84,6 +84,10 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
 
     // Trigger orchestration on load
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      print("BOOKING START");
+      print("[BookingScreen] Session: ${widget.sessionId}");
+      print("[BookingScreen] Provider: ${widget.provider.name}");
+      print("[BookingScreen] Price: ${widget.pricingResponse.pricingData.totalPricePkr}");
       _runRealAIOrchestration();
     });
   }
@@ -104,7 +108,14 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
   }
 
   Future<void> _runRealAIOrchestration() async {
-    if (_isOrchestrating) return;
+    if (_isOrchestrating) {
+      print("[BookingScreen] Pipeline already running — ignoring duplicate call.");
+      return;
+    }
+
+    // Cancel any existing Firestore listener before creating a new one
+    await _sessionSubscription?.cancel();
+    _sessionSubscription = null;
 
     setState(() {
       _isOrchestrating = true;
@@ -166,14 +177,7 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
           _isOrchestrating = false;
           _errorMessage = data['error_message'] as String? ?? "An error occurred during supervisor orchestration.";
           HapticFeedback.vibrate();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(_errorMessage!),
-              backgroundColor: const Color(0xFFEF4444),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          );
+          // Snackbar is handled exclusively by the catch block to prevent duplicates.
         }
       });
     });
@@ -192,12 +196,21 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
       }
     } catch (e) {
       if (mounted) {
+        final errorMsg = e.toString().replaceFirst("Exception: ", "");
         setState(() {
           _isOrchestrating = false;
           _hasError = true;
-          _errorMessage = e.toString().replaceFirst("Exception: ", "");
+          _errorMessage = errorMsg;
         });
         HapticFeedback.vibrate();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
       }
     }
   }

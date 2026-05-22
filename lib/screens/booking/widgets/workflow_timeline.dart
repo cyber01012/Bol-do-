@@ -254,7 +254,7 @@ class WorkflowTimeline extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(color: Colors.amber.withOpacity(0.12)),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Active',
                         style: GoogleFonts.poppins(
                           fontSize: 8,

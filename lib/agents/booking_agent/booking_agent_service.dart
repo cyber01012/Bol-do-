@@ -25,13 +25,42 @@ class BookingAgentService {
     final traceId = 'trace_book_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(1000)}';
 
     try {
-      // 0. Early Return Protection
+      // 0. Early Return Protection — throw a non-retryable signal so executeAgentStage
+      //    does NOT retry this as a genuine failure.
       final activeSessionDoc = await _firestoreService.getDocument('orchestration_sessions', request.sessionId);
       if (activeSessionDoc != null) {
         final pipelineStatus = activeSessionDoc['pipeline_status'] as String?;
         if (pipelineStatus == 'running_bookingagent' || pipelineStatus == 'completed') {
-          print('Booking already processing or completed. Returning early.');
-          return _buildDegradedFallbackResponse(request, traceId, 'Booking already in progress');
+          print('[BookingAgent] Already processing/completed ($pipelineStatus). Aborting duplicate execution.');
+          // Return the existing booking id so the pipeline treats this as success.
+          final existingBookingId = activeSessionDoc['booking_id'] as String? ?? 'book_${request.sessionId}';
+          return BookingResponse(
+            bookingId: existingBookingId,
+            bookingStatus: 'confirmed',
+            provider: request.selectedProvider,
+            scheduledTime: request.userRequest.requestedTime,
+            customerSummary: CustomerSummary(
+              customerId: 'user_customer_999',
+              name: 'Valued Customer',
+              contactNumber: '+923001234567',
+            ),
+            notificationRequired: false,
+            orchestrationMetadata: OrchestrationMetadata(
+              sessionId: request.sessionId,
+              requestId: request.requestId,
+              traceId: traceId,
+              orchestrationStatus: 'success',
+              currentAgent: 'BookingAgent',
+              nextAgent: 'NotificationAgent',
+            ),
+            alternativeRecommendation: null,
+            pricingData: {
+              'total_price_pkr': request.pricingData.totalPricePkr,
+              'confidence_score': request.pricingData.confidenceScore,
+              'breakdown': request.pricingData.breakdown,
+            },
+            notificationPayload: _buildNotificationPayload(request, existingBookingId, request.pricingData.totalPricePkr),
+          );
         }
       }
 

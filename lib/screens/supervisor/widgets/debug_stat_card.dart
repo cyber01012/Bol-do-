@@ -118,7 +118,7 @@ class DebugStatCard extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
+            
           ],
         ),
       ),

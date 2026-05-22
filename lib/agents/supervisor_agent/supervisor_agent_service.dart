@@ -311,7 +311,24 @@ class SupervisorAgentService {
     required PricingResponse pricingResponse,
   }) async {
     print("🤖 [SupervisorAgent] Continuing Booking Pipeline for $sessionId...");
+    print("BOOKING START");
     final docRef = _firestore.collection('orchestration_sessions').doc(sessionId);
+
+    // Guard: abort if booking is already active or completed for this session.
+    try {
+      final guardSnapshot = await docRef.get();
+      if (guardSnapshot.exists) {
+        final existingStatus = guardSnapshot.data()?['pipeline_status'] as String? ?? '';
+        if (existingStatus == 'running_bookingagent' ||
+            existingStatus == 'completed' ||
+            existingStatus.startsWith('completed')) {
+          print("[SupervisorAgent] Booking already active/completed ($existingStatus). Aborting duplicate pipeline.");
+          return;
+        }
+      }
+    } catch (_) {
+      // Non-fatal: proceed even if guard check fails
+    }
 
     try {
 
