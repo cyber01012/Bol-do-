@@ -2,18 +2,17 @@ import 'dart:math';
 import 'package:boldo_ai/agents/booking_agent/booking_model.dart';
 import 'firestore_service.dart';
 import 'notification_model.dart';
-import 'trace_logger.dart';
+import '../../services/central_trace_logger.dart';
 
 class NotificationAgentService {
   final FirestoreService _firestoreService;
-  final TraceLogger _traceLogger;
+  final CentralTraceLogger _traceLogger;
 
   NotificationAgentService({
     FirestoreService? firestoreService,
-    TraceLogger? traceLogger,
+    CentralTraceLogger? traceLogger,
   })  : _firestoreService = firestoreService ?? FirestoreService(),
-        _traceLogger =
-            traceLogger ?? TraceLogger(firestoreService: firestoreService);
+        _traceLogger = traceLogger ?? CentralTraceLogger();
 
   Future<NotificationResponse> processResponse(
       BookingResponse bookingResponse) async {
@@ -61,12 +60,14 @@ class NotificationAgentService {
 
         // Log trace for idempotency match
         await _traceLogger.logTrace(
-          bookingResponse: bookingResponse,
           traceId: traceId,
-          decision:
-              'Idempotency Match: Notifications already generated and stored.',
+          sessionId: bookingResponse.sessionId,
+          userId: bookingResponse.orchestrationMetadata.requestId,
+          agentName: 'NotificationAgent',
+          decision: 'Idempotency Match: Notifications already generated and stored.',
           confidence: 1.0,
-          reasoningBreakdown: {
+          orchestrationStatus: bookingResponse.orchestrationStatus,
+          reasoning: {
             'idempotency': 'matched',
             'user_notification_found': true,
             'provider_notification_found': existingProviderNotif != null,
@@ -148,12 +149,14 @@ class NotificationAgentService {
 
       // 4. Log Trace and update central orchestration status
       await _traceLogger.logTrace(
-        bookingResponse: bookingResponse,
         traceId: traceId,
-        decision:
-            'Successfully structured and persisted user and provider notifications.',
+        sessionId: bookingResponse.sessionId,
+        userId: bookingResponse.orchestrationMetadata.requestId,
+        agentName: 'NotificationAgent',
+        decision: 'Successfully structured and persisted user and provider notifications.',
         confidence: 1.0,
-        reasoningBreakdown: {
+        orchestrationStatus: bookingResponse.orchestrationStatus,
+        reasoning: {
           'idempotency': 'clear',
           'user_notification_created': true,
           'provider_notification_created': true,
@@ -265,12 +268,14 @@ class NotificationAgentService {
 
     // Run async trace log
     _traceLogger.logTrace(
-      bookingResponse: bookingResponse,
       traceId: traceId,
-      decision:
-          'Catastrophic error in Notification Agent. Initiated degraded fallback notifications.',
+      sessionId: bookingResponse.sessionId,
+      userId: bookingResponse.orchestrationMetadata.requestId,
+      agentName: 'NotificationAgent',
+      decision: 'Catastrophic error in Notification Agent. Initiated degraded fallback notifications.',
       confidence: 0.1,
-      reasoningBreakdown: {
+      orchestrationStatus: 'failed_degraded',
+      reasoning: {
         'error': error,
         'status': 'degraded',
         'user_notified': false,

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../orchestrator/antigravity_orchestrator.dart';
+import '../../agents/supervisor_agent/supervisor_agent_service.dart';
 import '../../models/ranking_output.dart';
 import '../../models/provider.dart' as model;
 import '../widgets/glass_card.dart';
@@ -15,6 +15,7 @@ import 'ranking_logs_screen.dart';
 import '../../main.dart';
 import '../widgets/boldo_app_bar.dart';
 import '../widgets/boldo_bottom_bar.dart';
+import '../../screens/booking/pricing_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,7 +26,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
-  final AntigravityOrchestrator _orchestrator = AntigravityOrchestrator();
+  final SupervisorAgentService _orchestrator = SupervisorAgentService();
   
   bool _isDarkMode = true;
   bool _isProcessing = false;
@@ -246,24 +247,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeNotifier,
-      builder: (context, currentMode, _) {
-        _isDarkMode = currentMode == ThemeMode.dark;
-        final themeBg = _isDarkMode ? const Color(0xFF060608) : const Color(0xFFF4F6F9);
-        final themePrimaryText = _isDarkMode ? Colors.white : const Color(0xFF1E2025);
-        final themeSecondaryText = _isDarkMode ? const Color(0xFF9EA3B0) : const Color(0xFF6B7280);
-        final themeCardBg = _isDarkMode ? const Color(0xFF121216) : Colors.white;
-        final themeBorder = _isDarkMode ? const Color(0xFF232330) : const Color(0xFFE5E7EB);
-        final appTheme = _isDarkMode ? BolDoTheme.darkTheme : BolDoTheme.lightTheme;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    _isDarkMode = isDarkMode;
+    final themeBg = Theme.of(context).scaffoldBackgroundColor;
+    final themePrimaryText = Theme.of(context).textTheme.bodyLarge?.color ?? (isDarkMode ? Colors.white : const Color(0xFF1E2025));
+    final themeSecondaryText = Theme.of(context).textTheme.bodyMedium?.color ?? (isDarkMode ? const Color(0xFF9EA3B0) : const Color(0xFF6B7280));
+    final themeCardBg = Theme.of(context).cardTheme.color ?? (isDarkMode ? const Color(0xFF121216) : Colors.white);
+    final themeBorder = isDarkMode ? const Color(0xFF232330) : const Color(0xFFE5E7EB);
 
-        return Theme(
-          data: appTheme,
-          child: Scaffold(
-            backgroundColor: themeBg,
-            extendBody: true,
-            appBar: const BolDoAppBar(),
-            body: Stack(
+    return Scaffold(
+      backgroundColor: themeBg,
+      extendBody: true,
+      appBar: const BolDoAppBar(),
+      body: Stack(
           children: [
             // Decorative background glowing accents
             if (_isDarkMode) ...[
@@ -477,116 +473,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             const SizedBox(height: 20),
                           ],
 
-                          // Stream of Live Pipeline Logs at bottom
-                          if (_isProcessing) ...[
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'LIVE PIPELINE MONITOR',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.0,
-                                  color: const Color(0xFF8B5CF6),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Container(
-                              height: 180,
-                              decoration: BoxDecoration(
-                                color: themeCardBg,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: themeBorder),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: StreamBuilder<QuerySnapshot>(
-                                stream: FirebaseFirestore.instance
-                                    .collection('workflow_logs')
-                                    .orderBy('timestamp', descending: true)
-                                    .limit(5)
-                                    .snapshots(),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState == ConnectionState.waiting) {
-                                    return const Center(
-                                      child: CircularProgressIndicator(
-                                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
-                                      ),
-                                    );
-                                  }
-                                  final docs = snapshot.data?.docs ?? [];
-                                  if (docs.isEmpty) {
-                                    return Center(
-                                      child: Padding(
-                                        child: Text(
-                                          'Orchestrator ready. Submit a suggestion above to initiate agent workflow.',
-                                          style: GoogleFonts.poppins(color: themeSecondaryText, fontSize: 12),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                        padding: const EdgeInsets.all(20),
-                                      ),
-                                    );
-                                  }
 
-                                  return ListView.builder(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                    itemCount: docs.length,
-                                    physics: const BouncingScrollPhysics(),
-                                    itemBuilder: (context, index) {
-                                      final data = docs[index].data() as Map<String, dynamic>;
-                                      final agent = data['agent'] ?? 'System';
-                                      final decision = data['decision'] ?? '';
-                                      final action = data['action_taken'] ?? '';
-                                      final severity = data['severity'] ?? 'info';
-                                      
-                                      Color agentColor = const Color(0xFF8B5CF6);
-                                      if (agent.toString().contains('Intent')) agentColor = const Color(0xFF3B82F6);
-                                      if (agent.toString().contains('Discovery')) agentColor = const Color(0xFFEC4899);
-                                      if (agent.toString().contains('Ranking')) agentColor = Colors.amber;
-                                      if (severity == 'critical') agentColor = const Color(0xFFEF4444);
-
-                                      return Container(
-                                        margin: const EdgeInsets.only(bottom: 8),
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: _isDarkMode ? Colors.white.withOpacity(0.015) : Colors.black.withOpacity(0.01),
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: _isDarkMode ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02)),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  '🤖 $agent',
-                                                  style: GoogleFonts.poppins(
-                                                    color: agentColor,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 11,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  action.toString().toUpperCase(),
-                                                  style: GoogleFonts.poppins(color: agentColor.withOpacity(0.8), fontSize: 8, fontWeight: FontWeight.w800),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              decision,
-                                              style: GoogleFonts.poppins(color: themePrimaryText, fontSize: 12, height: 1.3),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ),
@@ -595,18 +482,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
 
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: const BolDoBottomBar(isHome: true),
-            ),
           ],
         ),
-      ),
-    );
-  },
-);
+      );
   }
 
   // Claude-style realtime thinking block
@@ -865,13 +743,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             child: ElevatedButton(
               onPressed: () {
                 HapticFeedback.heavyImpact();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Confirming booking slot with ${p.name}...'),
-                    backgroundColor: const Color(0xFF10B981),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                if (_fullProviderDetails != null) {
+                  final sessionId = 'sess_${DateTime.now().millisecondsSinceEpoch}';
+                  final requestId = 'req_$sessionId';
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PricingScreen(
+                        provider: _fullProviderDetails!,
+                        sessionId: sessionId,
+                        requestId: requestId,
+                        userId: 'user_customer_999',
+                        serviceType: _fullProviderDetails!.serviceType,
+                        isDarkMode: _isDarkMode,
+                      ),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Provider details are still loading...'),
+                      backgroundColor: const Color(0xFF10B981),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF10B981),

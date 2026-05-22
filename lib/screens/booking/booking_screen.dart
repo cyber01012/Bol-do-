@@ -12,6 +12,7 @@ import '../../agents/booking_agent/booking_model.dart' as booking;
 import '../../agents/notification_agent/notification_agent_service.dart';
 import '../../agents/followup_agent/followup_agent_service.dart';
 import '../../agents/followup_agent/followup_model.dart';
+import '../../agents/supervisor_agent/supervisor_agent_service.dart';
 
 // Screen imports
 import 'widgets/booking_header.dart';
@@ -24,13 +25,23 @@ import 'trace_logs_screen.dart';
 import 'dispute_screen.dart';
 import 'notification_screen.dart';
 import 'followup_screen.dart';
-import '../debug/firestore_debug_screen.dart';
+import '../supervisor/supervisor_dashboard_screen.dart';
 
 class BookingScreen extends StatefulWidget {
+  final String sessionId;
+  final String userId;
+  final String serviceType;
+  final PricingResponse pricingResponse;
+  final dynamic provider; // using dynamic to avoid tight coupling if not needed, or we can use app_models.Provider
   final Future<void> Function()? onRunRawPipeline;
 
   const BookingScreen({
     super.key,
+    required this.sessionId,
+    required this.userId,
+    required this.serviceType,
+    required this.pricingResponse,
+    required this.provider,
     this.onRunRawPipeline,
   });
 
@@ -61,6 +72,7 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
 
   // Animation controller
   late AnimationController _pulseController;
+  StreamSubscription<DocumentSnapshot>? _sessionSubscription;
 
   @override
   void initState() {
@@ -79,6 +91,7 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
   @override
   void dispose() {
     _pulseController.dispose();
+    _sessionSubscription?.cancel();
     super.dispose();
   }
 
@@ -93,15 +106,13 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
   Future<void> _runRealAIOrchestration() async {
     if (_isOrchestrating) return;
 
-    final sessionId = 'sess_${DateTime.now().millisecondsSinceEpoch}';
-
     setState(() {
       _isOrchestrating = true;
-      _currentSessionId = sessionId;
-      _currentBookingId = 'book_$sessionId';
-      _timeIntent = '--:--:--';
-      _timeRanked = '--:--:--';
-      _timePricing = '--:--:--';
+      _currentSessionId = widget.sessionId;
+      _currentBookingId = 'book_${widget.sessionId}';
+      _timeIntent = _formatCurrentTime();
+      _timeRanked = _formatCurrentTime();
+      _timePricing = _formatCurrentTime();
       _timeBooking = '--:--:--';
       _timeNotification = '--:--:--';
       _timeFollowup = '--:--:--';
@@ -109,129 +120,85 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
       _errorMessage = null;
     });
 
+    HapticFeedback.lightImpact();
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    // Subscribe to Firestore for real-time orchestration session updates
+    _sessionSubscription = FirebaseFirestore.instance
+        .collection('orchestration_sessions')
+        .doc(widget.sessionId)
+        .snapshots()
+        .listen((snapshot) {
+      if (!mounted) return;
+      final data = snapshot.data();
+      if (data == null) return;
+
+      final completed = data['completed_agents'] as Map? ?? {};
+      final orchestrationStatus = data['orchestration_status'] as String? ?? 'running';
+      final pipelineStatus = data['pipeline_status'] as String? ?? 'pending';
+
+      setState(() {
+        if (completed['PricingAgent'] == true && _timePricing == '--:--:--') {
+          _timePricing = _formatCurrentTime();
+          HapticFeedback.lightImpact();
+        }
+        if (completed['BookingAgent'] == true && _timeBooking == '--:--:--') {
+          _timeBooking = _formatCurrentTime();
+          HapticFeedback.mediumImpact();
+        }
+        if (completed['NotificationAgent'] == true && _timeNotification == '--:--:--') {
+          _timeNotification = _formatCurrentTime();
+          HapticFeedback.lightImpact();
+        }
+        if (completed['FollowUpAgent'] == true && _timeFollowup == '--:--:--') {
+          _timeFollowup = _formatCurrentTime();
+          HapticFeedback.heavyImpact();
+          _isOrchestrating = false;
+        }
+        
+        final String? bId = data['booking_id'] as String?;
+        if (bId != null && bId.isNotEmpty) {
+          _currentBookingId = bId;
+        }
+
+        if (orchestrationStatus == 'failed' || pipelineStatus == 'failed') {
+          _hasError = true;
+          _isOrchestrating = false;
+          _errorMessage = data['error_message'] as String? ?? "An error occurred during supervisor orchestration.";
+          HapticFeedback.vibrate();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_errorMessage!),
+              backgroundColor: const Color(0xFFEF4444),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        }
+      });
+    });
+
     try {
-      // 1. Initial State / Intent Decoded
-      setState(() {
-        _timeIntent = _formatCurrentTime();
-      });
-      HapticFeedback.lightImpact();
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // 2. Expert Matched
-      setState(() {
-        _timeRanked = _formatCurrentTime();
-      });
-      HapticFeedback.lightImpact();
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // ================= PRICING AGENT =================
-      final pricingRequest = PricingRequest(
-        requestId: "req_$sessionId",
-        sessionId: sessionId,
-        userRequest: UserRequest(
-          serviceType: "electrician",
-          urgency: "urgent",
-          requestedTime: DateTime.now().add(const Duration(hours: 2)),
-          isRepeatCustomer: false,
-        ),
-        selectedProvider: SelectedProvider(
-          providerId: "provider_001",
-          distanceKm: 5.0,
-          complexity: "basic",
-        ),
+      final supervisor = SupervisorAgentService();
+      await supervisor.runBookingPipeline(
+        sessionId: widget.sessionId,
+        userId: widget.userId,
+        serviceType: widget.serviceType,
+        pricingResponse: widget.pricingResponse,
       );
-      final pricingAgent = PricingAgentService();
-      final pricingResponse = await pricingAgent.processRequest(pricingRequest);
 
-      if (pricingResponse.orchestrationStatus == 'failed') {
-        throw Exception("Pricing Agent failed calculation");
-      }
-
-      setState(() {
-        _timePricing = _formatCurrentTime();
-      });
-      HapticFeedback.lightImpact();
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // ================= BOOKING AGENT =================
-      final bookingRequest = booking.BookingRequest(
-        requestId: pricingResponse.requestId,
-        sessionId: sessionId,
-        orchestrationStatus: pricingResponse.orchestrationStatus,
-        selectedProvider: booking.SelectedProvider(
-          providerId: pricingRequest.selectedProvider.providerId,
-          name: "Ali Electric Works",
-          serviceType: pricingRequest.userRequest.serviceType,
-        ),
-        pricingData: booking.PricingData(
-          totalPricePkr: pricingResponse.pricingData.totalPricePkr,
-          confidenceScore: pricingResponse.pricingData.confidenceScore,
-          breakdown: pricingResponse.pricingData.breakdown,
-        ),
-        userRequest: booking.UserRequest(
-          serviceType: pricingRequest.userRequest.serviceType,
-          urgency: pricingRequest.userRequest.urgency ?? "urgent",
-          requestedTime: pricingRequest.userRequest.requestedTime ?? DateTime.now(),
-        ),
-        bookingMetadata: booking.BookingMetadata(
-          paymentMethod: "cash_on_delivery",
-        ),
-      );
-      final bookingAgent = BookingAgentService();
-      final bookingResponse = await bookingAgent.processRequest(bookingRequest);
-
-      if (bookingResponse.orchestrationMetadata.orchestrationStatus == 'failed' ||
-          bookingResponse.bookingStatus == 'failed') {
-        throw Exception("Booking Agent rejected slot: provider busy or conflict");
-      }
-
-      setState(() {
-        _timeBooking = _formatCurrentTime();
-        _currentBookingId = bookingResponse.bookingId;
-      });
-      HapticFeedback.mediumImpact();
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // ================= NOTIFICATION AGENT =================
-      final notificationAgent = NotificationAgentService();
-      await notificationAgent.processResponse(bookingResponse);
-
-      setState(() {
-        _timeNotification = _formatCurrentTime();
-      });
-      HapticFeedback.lightImpact();
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // ================= FOLLOWUP AGENT =================
-      final followUpAgent = FollowUpAgentService();
-      final followUpRequest = FollowUpRequest(
-        bookingId: bookingResponse.bookingId,
-        sessionId: sessionId,
-        bookingStatus: bookingResponse.bookingStatus,
-        scheduledTime: bookingResponse.scheduledTime,
-        provider: bookingResponse.provider,
-        customerSummary: bookingResponse.customerSummary,
-        orchestrationMetadata: bookingResponse.orchestrationMetadata,
-      );
-      await followUpAgent.processRequest(followUpRequest);
-
-      setState(() {
-        _timeFollowup = _formatCurrentTime();
-        _isOrchestrating = false;
-      });
-      HapticFeedback.heavyImpact();
-
-      // Trigger custom callback if needed
       if (widget.onRunRawPipeline != null) {
         widget.onRunRawPipeline!();
       }
     } catch (e) {
-      setState(() {
-        _isOrchestrating = false;
-        _hasError = true;
-        _errorMessage = e.toString().replaceFirst("Exception: ", "");
-      });
-      HapticFeedback.vibrate();
+      if (mounted) {
+        setState(() {
+          _isOrchestrating = false;
+          _hasError = true;
+          _errorMessage = e.toString().replaceFirst("Exception: ", "");
+        });
+        HapticFeedback.vibrate();
+      }
     }
   }
 
@@ -284,7 +251,7 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => FirestoreDebugScreen(
+        builder: (context) => SupervisorDashboardScreen(
           isDarkMode: _isDarkMode,
         ),
       ),
@@ -505,11 +472,21 @@ class _BookingScreenState extends State<BookingScreen> with TickerProviderStateM
                                         ],
 
                                         // Provider Card
-                                        ProviderCard(isDarkMode: _isDarkMode),
+                                        ProviderCard(
+                                          providerName: widget.provider.name,
+                                          serviceType: widget.serviceType,
+                                          rating: widget.provider.rating,
+                                          isDarkMode: _isDarkMode,
+                                        ),
                                         const SizedBox(height: 16),
 
                                         // Price Summary
-                                        PriceBreakdown(isDarkMode: _isDarkMode),
+                                        PriceBreakdown(
+                                          totalPrice: widget.pricingResponse.pricingData.totalPricePkr,
+                                          confidence: widget.pricingResponse.pricingData.confidenceScore,
+                                          breakdown: widget.pricingResponse.pricingData.breakdown,
+                                          isDarkMode: _isDarkMode,
+                                        ),
                                         const SizedBox(height: 16),
 
                                         // AI Timeline

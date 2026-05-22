@@ -15,7 +15,10 @@ void main() {
   });
 
   testWidgets('BolDo App smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(const BolDoApp());
+    await tester.pumpWidget(const BolDoApp(
+      firebaseInitialized: true,
+      firebaseInitError: '',
+    ));
 
     await tester.pumpAndSettle();
 

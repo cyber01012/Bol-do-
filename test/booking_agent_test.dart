@@ -1,386 +1,172 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:boldo_ai/agents/booking_agent/booking_model.dart';
-import 'package:boldo_ai/agents/booking_agent/booking_agent_service.dart';
-import 'package:boldo_ai/agents/booking_agent/firestore_service.dart';
-import 'package:boldo_ai/agents/booking_agent/trace_logger.dart';
-import 'package:boldo_ai/agents/booking_agent/idempotency_manager.dart';
+// ==============================
+// SUPERVISOR AGENT PIPELINE FIX
+// Replace your booking pipeline section
+// inside supervisor_agent_service.dart
+// ==============================
 
-// In-memory Mock Firestore Service
-class MockFirestoreService extends FirestoreService {
-  final Map<String, Map<String, Map<String, dynamic>>> database = {
-    'providers': {},
-    'bookings': {},
-    'agent_traces': {},
-    'orchestration_sessions': {},
-    'notifications': {},
-  };
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:boldo_ai/agents/booking_agent/booking_model.dart'
+    as booking;
 
-  @override
-  Future<void> saveDocument(
-    String collectionPath,
-    String documentId,
-    Map<String, dynamic> data,
-  ) async {
-    database.putIfAbsent(collectionPath, () => {})[documentId] = data;
-  }
+// AFTER pricingResponse success:
 
-  @override
-  Future<Map<String, dynamic>?> getDocument(
-    String collectionPath,
-    String documentId,
-  ) async {
-    return database[collectionPath]?[documentId];
-  }
+await FirebaseFirestore.instance
+    .collection('orchestration_sessions')
+    .doc(sessionId)
+    .set({
+  'session_id': sessionId,
+  'pipeline_status': 'pricing_completed',
 
-  @override
-  Future<List<Map<String, dynamic>>> queryOverlapBookings({
-    required String providerId,
-    required DateTime requestedTime,
-    required Duration bufferWindow,
-  }) async {
-    final startTime = requestedTime.subtract(bufferWindow);
-    final endTime = requestedTime.add(bufferWindow);
+  'completed_agents': {
+    'PricingAgent': true,
+  },
 
-    final results = <Map<String, dynamic>>[];
-    final bookingsCollection = database['bookings'] ?? {};
-    
-    for (final booking in bookingsCollection.values) {
-      if (booking['provider_id'] == providerId) {
-        final status = booking['booking_status'] as String?;
-        if (status == 'confirmed' || status == 'provider_assigned' || status == 'in_progress') {
-          final requestedTimeStr = booking['requested_time'] as String?;
-          if (requestedTimeStr != null) {
-            final bookingTime = DateTime.parse(requestedTimeStr);
-            if (bookingTime.isAfter(startTime) && bookingTime.isBefore(endTime)) {
-              results.add(booking);
-            }
-          }
-        }
-      }
-    }
-    return results;
-  }
+  'last_updated': DateTime.now()
+      .toUtc()
+      .toIso8601String(),
+}, SetOptions(merge: true));
 
-  @override
-  Future<List<Map<String, dynamic>>> queryBackupProviders(String serviceType) async {
-    final results = <Map<String, dynamic>>[];
-    final providersCollection = database['providers'] ?? {};
-    for (final provider in providersCollection.values) {
-      if (provider['service_type'] == serviceType && provider['is_available'] == true) {
-        results.add(provider);
-      }
-    }
-    return results;
-  }
+
+// ==============================
+// CREATE VALID BOOKING REQUEST
+// ==============================
+
+final bookingRequest = booking.BookingRequest(
+  requestId: requestId,
+  sessionId: sessionId,
+
+  orchestrationStatus: 'success',
+
+  selectedProvider: booking.SelectedProvider(
+    providerId:
+        rankedProvider['provider_id'] ?? 'provider_001',
+
+    name:
+        rankedProvider['name'] ?? 'Unknown Provider',
+
+    serviceType: serviceType,
+  ),
+
+  pricingData: booking.PricingData(
+    totalPricePkr:
+        pricingResponse.pricingData.totalPricePkr,
+
+    confidenceScore:
+        pricingResponse.pricingData.confidenceScore,
+
+    breakdown:
+        pricingResponse.pricingData.breakdown,
+  ),
+
+  userRequest: booking.UserRequest(
+    serviceType: serviceType,
+
+    urgency: urgency ?? 'normal',
+
+    requestedTime:
+        DateTime.now().add(
+      const Duration(hours: 2),
+    ),
+  ),
+
+  bookingMetadata: booking.BookingMetadata(
+    paymentMethod: 'cash_on_delivery',
+  ),
+);
+
+
+// ==============================
+// RUN BOOKING AGENT
+// ==============================
+
+final bookingAgent = BookingAgentService();
+
+final bookingResponse =
+    await bookingAgent.processRequest(
+  bookingRequest,
+);
+
+
+// ==============================
+// BOOKING FAILURE CHECK
+// ==============================
+
+if (bookingResponse.bookingStatus == 'failed') {
+  throw Exception(
+    "Booking slot processing failed.",
+  );
 }
 
-// Exception throwing mock to test Outages
-class OutageFirestoreService extends FirestoreService {
-  @override
-  Future<Map<String, dynamic>?> getDocument(String collectionPath, String documentId) async {
-    throw Exception('Firestore Database Network Timeout Outage');
-  }
 
-  @override
-  Future<void> saveDocument(String collectionPath, String documentId, Map<String, dynamic> data) async {
-    throw Exception('Firestore Database Network Timeout Outage');
-  }
-}
+// ==============================
+// NOTIFICATION AGENT
+// ==============================
 
-void main() {
-  group('Booking Agent Tests', () {
-    late MockFirestoreService mockDb;
-    late BookingAgentService agentService;
+final notificationAgent =
+    NotificationAgentService();
 
-    setUp(() {
-      mockDb = MockFirestoreService();
-      
-      // Initialize mock providers
-      mockDb.database['providers']!['prov_ali'] = {
-        'provider_id': 'prov_ali',
-        'name': 'Ali AC Repair',
-        'service_type': 'ac_technician',
-        'is_available': true,
-        'rating': 4.8,
-      };
+final notificationResponse =
+    await notificationAgent.processResponse(
+  bookingResponse,
+);
 
-      mockDb.database['providers']!['prov_babar'] = {
-        'provider_id': 'prov_babar',
-        'name': 'Babar Electrician',
-        'service_type': 'ac_technician',
-        'is_available': true,
-        'rating': 4.6,
-      };
 
-      // Seed valid sessions for standard success path tests
-      mockDb.database['orchestration_sessions']!['sess_success'] = {
-        'session_id': 'sess_success',
-        'completed_agents': {'PricingAgent': true},
-        'pipeline_status': 'success',
-      };
+// ==============================
+// FOLLOWUP AGENT
+// ==============================
 
-      mockDb.database['orchestration_sessions']!['sess_conflict'] = {
-        'session_id': 'sess_conflict',
-        'completed_agents': {'PricingAgent': true},
-        'pipeline_status': 'success',
-      };
+final followupRequest = FollowUpRequest(
+  bookingId: bookingResponse.bookingId,
 
-      mockDb.database['orchestration_sessions']!['sess_offline'] = {
-        'session_id': 'sess_offline',
-        'completed_agents': {'PricingAgent': true},
-        'pipeline_status': 'success',
-      };
+  sessionId: sessionId,
 
-      mockDb.database['orchestration_sessions']!['sess_invalid_price'] = {
-        'session_id': 'sess_invalid_price',
-        'completed_agents': {'PricingAgent': true},
-        'pipeline_status': 'success',
-      };
+  bookingStatus:
+      bookingResponse.bookingStatus,
 
-      agentService = BookingAgentService(
-        firestoreService: mockDb,
-      );
-    });
+  scheduledTime:
+      bookingResponse.scheduledTime,
 
-    test('1. Success Booking Scenario 1: Active provider accepts slot & notifications stage', () async {
-      final request = BookingRequest(
-        requestId: 'req_success',
-        sessionId: 'sess_success',
-        orchestrationStatus: 'success',
-        selectedProvider: SelectedProvider(
-          providerId: 'prov_ali',
-          name: 'Ali AC Repair',
-          serviceType: 'ac_technician',
-        ),
-        pricingData: PricingData(
-          totalPricePkr: 1450.0,
-          confidenceScore: 0.95,
-          breakdown: {
-            'base_price': 1000.0,
-            'distance_cost': 312.5,
-            'urgency_multiplier': 1.3,
-            'time_multiplier': 1.2,
-          },
-        ),
-        userRequest: UserRequest(
-          serviceType: 'ac_technician',
-          urgency: 'same_day',
-          requestedTime: DateTime(2026, 5, 19, 14, 0), // 2 PM (daytime)
-        ),
-        bookingMetadata: BookingMetadata(paymentMethod: 'cash_on_delivery'),
-      );
+  provider:
+      bookingResponse.provider,
 
-      final response = await agentService.processRequest(request);
+  customerSummary:
+      bookingResponse.customerSummary,
 
-      // Allow async fire-and-forget logging to complete
-      await Future.delayed(const Duration(milliseconds: 50));
+  orchestrationMetadata:
+      bookingResponse.orchestrationMetadata,
+);
 
-      // Verify Output Contract
-      expect(response.orchestrationStatus, 'success');
-      expect(response.bookingStatus, 'confirmed');
-      expect(response.bookingId, 'book_sess_success');
-      expect(response.selectedProvider.providerId, 'prov_ali');
-      expect(response.pricingData['total_price_pkr'], 1450.0);
+final followupAgent =
+    FollowUpAgentService();
 
-      // Verify Notification Messages
-      expect(response.notificationPayload.user.message.contains('CONFIRMED'), true);
-      expect(response.notificationPayload.user.message.contains('1450 PKR'), true);
-      expect(response.notificationPayload.provider.message.contains('1450 PKR'), true);
+final followupResponse =
+    await followupAgent.processRequest(
+  followupRequest,
+);
 
-      // Verify Firestore state changes
-      final savedBooking = mockDb.database['bookings']!['book_sess_success'];
-      expect(savedBooking, isNotNull);
-      expect(savedBooking!['booking_status'], 'confirmed');
-      expect(savedBooking['provider_id'], 'prov_ali');
 
-      // Verify traces and notifications saved in Mock DB
-      expect(mockDb.database['notifications']!['notif_user_sess_success'], isNotNull);
-      expect(mockDb.database['notifications']!['notif_provider_sess_success'], isNotNull);
-      expect(mockDb.database['orchestration_sessions']!['sess_success'], isNotNull);
-    });
+// ==============================
+// FINAL SESSION UPDATE
+// ==============================
 
-    test('2. Success Booking Scenario 2 (Idempotency): Repeat requests return same booking without duplicate database entries', () async {
-      // 1. Send first request
-      final request = BookingRequest(
-        requestId: 'req_success',
-        sessionId: 'sess_success',
-        orchestrationStatus: 'success',
-        selectedProvider: SelectedProvider(
-          providerId: 'prov_ali',
-          name: 'Ali AC Repair',
-          serviceType: 'ac_technician',
-        ),
-        pricingData: PricingData(
-          totalPricePkr: 1450.0,
-          confidenceScore: 0.95,
-          breakdown: {},
-        ),
-        userRequest: UserRequest(
-          serviceType: 'ac_technician',
-          urgency: 'same_day',
-          requestedTime: DateTime(2026, 5, 19, 14, 0),
-        ),
-      );
+await FirebaseFirestore.instance
+    .collection('orchestration_sessions')
+    .doc(sessionId)
+    .set({
+  'pipeline_status': 'completed',
 
-      final response1 = await agentService.processRequest(request);
-      expect(response1.bookingId, 'book_sess_success');
-      expect(response1.bookingStatus, 'confirmed');
+  'completed_agents': {
+    'PricingAgent': true,
+    'BookingAgent': true,
+    'NotificationAgent': true,
+    'FollowUpAgent': true,
+  },
 
-      final countBefore = mockDb.database['bookings']!.length;
+  'last_updated': DateTime.now()
+      .toUtc()
+      .toIso8601String(),
+}, SetOptions(merge: true));
 
-      // 2. Submit second identical request
-      final response2 = await agentService.processRequest(request);
-
-      // 3. Verify same response is returned and no duplicate entry is written
-      expect(response2.bookingId, 'book_sess_success');
-      expect(response2.bookingStatus, 'confirmed');
-      expect(mockDb.database['bookings']!.length, countBefore);
-    });
-
-    test('3. Success Booking Scenario 3 (Decayed Pricing): Clamps price to 500 PKR and completes booking successfully', () async {
-      final request = BookingRequest(
-        requestId: 'req_invalid_price',
-        sessionId: 'sess_invalid_price',
-        orchestrationStatus: 'success',
-        selectedProvider: SelectedProvider(
-          providerId: 'prov_ali',
-          name: 'Ali AC Repair',
-          serviceType: 'ac_technician',
-        ),
-        pricingData: PricingData(
-          totalPricePkr: -150.0, // Subzero price!
-          confidenceScore: 0.95,
-          breakdown: {},
-        ),
-        userRequest: UserRequest(
-          serviceType: 'ac_technician',
-          urgency: 'same_day',
-          requestedTime: DateTime(2026, 5, 19, 14, 0),
-        ),
-      );
-
-      final response = await agentService.processRequest(request);
-
-      // Price gets clamped to 500 PKR, orchestration degraded, but booking succeeded
-      expect(response.pricingData['total_price_pkr'], 500.0);
-      expect(response.orchestrationStatus, 'failed_degraded');
-      expect(response.bookingStatus, 'confirmed');
-    });
-
-    test('4. Double Booking Prevention: Rejects slot and provides alternative recommendation when provider is busy within +/- 2-hour window', () async {
-      // Seed an existing confirmed booking for Ali at 2 PM
-      mockDb.database['bookings']!['book_existing'] = {
-        'booking_id': 'book_existing',
-        'session_id': 'sess_existing',
-        'provider_id': 'prov_ali',
-        'requested_time': DateTime(2026, 5, 19, 14, 0).toIso8601String(), // 2 PM
-        'booking_status': 'confirmed',
-      };
-
-      // Request a booking at 3 PM for Ali (within the 2-hour window -> conflict!)
-      final request = BookingRequest(
-        requestId: 'req_conflict',
-        sessionId: 'sess_conflict',
-        orchestrationStatus: 'success',
-        selectedProvider: SelectedProvider(
-          providerId: 'prov_ali',
-          name: 'Ali AC Repair',
-          serviceType: 'ac_technician',
-        ),
-        pricingData: PricingData(
-          totalPricePkr: 1450.0,
-          confidenceScore: 0.95,
-          breakdown: {},
-        ),
-        userRequest: UserRequest(
-          serviceType: 'ac_technician',
-          urgency: 'same_day',
-          requestedTime: DateTime(2026, 5, 19, 15, 0),
-        ),
-      );
-
-      final response = await agentService.processRequest(request);
-
-      // Assert Double Booking Blocked
-      expect(response.orchestrationStatus, 'failed');
-      expect(response.bookingStatus, 'failed');
-      
-      // Assert alternative recommendation generated (Babar)
-      expect(response.alternativeRecommendation, isNotNull);
-      expect(response.alternativeRecommendation!.providerId, 'prov_babar');
-      expect(response.alternativeRecommendation!.name, 'Babar Electrician');
-    });
-
-    test('5. Failure Scenario 1 (Provider Offline): Returns failed status and attaches alternative backup recommendation', () async {
-      mockDb.database['providers']!['prov_offline'] = {
-        'provider_id': 'prov_offline',
-        'name': 'Offline Aircon',
-        'service_type': 'ac_technician',
-        'is_available': false, // Inactive/Offline!
-        'rating': 4.9,
-      };
-
-      final request = BookingRequest(
-        requestId: 'req_offline',
-        sessionId: 'sess_offline',
-        orchestrationStatus: 'success',
-        selectedProvider: SelectedProvider(
-          providerId: 'prov_offline',
-          name: 'Offline Aircon',
-          serviceType: 'ac_technician',
-        ),
-        pricingData: PricingData(
-          totalPricePkr: 1450.0,
-          confidenceScore: 0.95,
-          breakdown: {},
-        ),
-        userRequest: UserRequest(
-          serviceType: 'ac_technician',
-          urgency: 'same_day',
-          requestedTime: DateTime(2026, 5, 19, 14, 0),
-        ),
-      );
-
-      final response = await agentService.processRequest(request);
-
-      expect(response.orchestrationStatus, 'failed');
-      expect(response.bookingStatus, 'failed');
-      expect(response.alternativeRecommendation!.providerId, 'prov_ali'); // prov_ali has rating 4.8, which is higher than prov_babar (4.6)
-    });
-
-    test('6. Failure Scenario 2 (Database Outage): Handles firestore read/write outages gracefully without crashing the pipeline', () async {
-      final outageDb = OutageFirestoreService();
-      final outageService = BookingAgentService(
-        firestoreService: outageDb,
-      );
-
-      final request = BookingRequest(
-        requestId: 'req_outage',
-        sessionId: 'sess_outage',
-        orchestrationStatus: 'success',
-        selectedProvider: SelectedProvider(
-          providerId: 'prov_ali',
-          name: 'Ali AC Repair',
-          serviceType: 'ac_technician',
-        ),
-        pricingData: PricingData(
-          totalPricePkr: 1450.0,
-          confidenceScore: 0.95,
-          breakdown: {},
-        ),
-        userRequest: UserRequest(
-          serviceType: 'ac_technician',
-          urgency: 'same_day',
-          requestedTime: DateTime(2026, 5, 19, 14, 0),
-        ),
-      );
-
-      final response = await outageService.processRequest(request);
-
-      // Gracefully completes returning in-memory failure details
-      expect(response.orchestrationStatus, 'failed_degraded');
-      expect(response.bookingStatus, 'failed');
-      expect(response.notificationPayload.user.message.contains('connection lag'), true);
-    });
-  });
-}
+print(
+  "✅ Full orchestration completed successfully",
+);

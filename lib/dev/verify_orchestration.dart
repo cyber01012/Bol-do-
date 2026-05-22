@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
-void main() async {
+void runVerification() async {
   print('==================================================');
   print('          BOLDO-AI ORCHESTRATION VERIFIER          ');
   print('==================================================\n');

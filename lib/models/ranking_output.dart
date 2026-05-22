@@ -1,12 +1,16 @@
 class RankedProvider {
   final String providerId;
   final String name;
+  final String serviceType;
+  final Map<String, dynamic>? providerMetadata;
   final double score;
   final String reasoning;
 
   RankedProvider({
     required this.providerId,
     required this.name,
+    required this.serviceType,
+    this.providerMetadata,
     required this.score,
     required this.reasoning,
   });
@@ -15,6 +19,8 @@ class RankedProvider {
     return RankedProvider(
       providerId: json['provider_id'] ?? '',
       name: json['name'] ?? '',
+      serviceType: json['service_type'] ?? '',
+      providerMetadata: json['metadata'],
       score: (json['score'] ?? 0).toDouble(),
       reasoning: json['reasoning'] ?? '',
     );

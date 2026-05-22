@@ -36,6 +36,8 @@ Return ONLY a valid JSON object matching the following structure (no markdown co
     {
       "provider_id": "id",
       "name": "name",
+      "service_type": "type",
+      "metadata": { "rating": 4.8, "distance_km": 2.3 },
       "score": 85.5,
       "reasoning": "A simple 1-sentence explanation of why this provider is ranked here based on distance, availability, and rating."
     }
@@ -43,6 +45,8 @@ Return ONLY a valid JSON object matching the following structure (no markdown co
   "top_choice": {
     "provider_id": "id",
     "name": "name",
+    "service_type": "type",
+    "metadata": { "rating": 4.8, "distance_km": 2.3 },
     "score": 95.0,
     "reasoning": "A simple, friendly, clear customer explanation of why they are the absolute best choice."
   }

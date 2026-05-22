@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'widgets/glass_card.dart';
 import '../../agents/dispute_agent/dispute_agent_service.dart';
 import '../../agents/dispute_agent/dispute_model.dart';
+import '../../agents/supervisor_agent/supervisor_agent_service.dart';
 
 class DisputeScreen extends StatefulWidget {
   final String sessionId;
@@ -66,8 +67,8 @@ class _DisputeScreenState extends State<DisputeScreen> {
         createdAt: DateTime.now(),
       );
 
-      final service = DisputeAgentService();
-      final response = await service.processRequest(request);
+      final supervisor = SupervisorAgentService();
+      final response = await supervisor.processDispute(request);
 
       if (mounted) {
         setState(() {

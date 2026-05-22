@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'glass_card.dart';
 
 class WorkflowTimeline extends StatelessWidget {
@@ -36,7 +37,7 @@ class WorkflowTimeline extends StatelessWidget {
         children: [
           Text(
             'AUTOMATED DISPATCH TRAIL',
-            style: TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 10,
               fontWeight: FontWeight.w800,
               color: themeSecondaryText,
@@ -199,7 +200,7 @@ class WorkflowTimeline extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
                       color: isCompleted ? primary : primary.withOpacity(0.65),
@@ -207,7 +208,7 @@ class WorkflowTimeline extends StatelessWidget {
                   ),
                   Text(
                     time,
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 10,
                       fontWeight: FontWeight.w500,
                       color: secondary.withOpacity(0.7),
@@ -222,7 +223,7 @@ class WorkflowTimeline extends StatelessWidget {
                   Expanded(
                     child: Text(
                       subtitle,
-                      style: TextStyle(
+                      style: GoogleFonts.poppins(
                         fontSize: 11,
                         color: secondary,
                       ),
@@ -238,7 +239,7 @@ class WorkflowTimeline extends StatelessWidget {
                       ),
                       child: Text(
                         chipLabel,
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 8,
                           fontWeight: FontWeight.w800,
                           color: stepColor,
@@ -255,7 +256,7 @@ class WorkflowTimeline extends StatelessWidget {
                       ),
                       child: const Text(
                         'Active',
-                        style: TextStyle(
+                        style: GoogleFonts.poppins(
                           fontSize: 8,
                           fontWeight: FontWeight.w800,
                           color: Colors.amber,

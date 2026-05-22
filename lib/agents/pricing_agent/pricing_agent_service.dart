@@ -1,13 +1,13 @@
 import 'dart:math';
 import 'pricing_model.dart';
 import 'pricing_calculator.dart';
-import 'trace_logger.dart';
+import '../../services/central_trace_logger.dart';
 
 class PricingAgentService {
-  final TraceLogger _traceLogger;
+  final CentralTraceLogger _traceLogger;
 
-  PricingAgentService({TraceLogger? traceLogger})
-      : _traceLogger = traceLogger ?? TraceLogger();
+  PricingAgentService({CentralTraceLogger? traceLogger})
+      : _traceLogger = traceLogger ?? CentralTraceLogger();
 
   Future<PricingResponse> processRequest(
     PricingRequest request,
@@ -22,17 +22,23 @@ class PricingAgentService {
 
     final response = PricingResponse(
       requestId: request.requestId,
+      sessionId: request.sessionId,
       agentTraceId: traceId,
       orchestrationStatus: _determineStatus(request),
       readyForBooking: true,
-      selectedProvider: request.selectedProvider.providerId,
+      selectedProvider: request.selectedProvider,
       pricingData: pricingData,
     );
 
     await _traceLogger.logTrace(
-      request: request,
-      response: response,
       traceId: traceId,
+      sessionId: request.sessionId,
+      userId: request.requestId, // Fallback as user_id if not explicitly provided in the request
+      agentName: 'PricingAgent',
+      decision: 'Calculated price: ${response.pricingData.totalPricePkr}',
+      confidence: response.pricingData.confidenceScore,
+      orchestrationStatus: response.orchestrationStatus,
+      reasoning: response.pricingData.breakdown,
     );
 
     return response;
@@ -68,19 +74,24 @@ Future<PricingResponse> _buildFallbackResponse(
 
   final response = PricingResponse(
     requestId: request.requestId,
+    sessionId: request.sessionId,
     agentTraceId: traceId,
     orchestrationStatus: 'failed_degraded',
     readyForBooking: true,
-    selectedProvider:
-        request.selectedProvider.providerId,
+    selectedProvider: request.selectedProvider,
     pricingData: fallbackPrice,
   );
 
   // SAVE FAILURE TRACE TO FIRESTORE
   await _traceLogger.logTrace(
-    request: request,
-    response: response,
     traceId: traceId,
+    sessionId: request.sessionId,
+    userId: request.requestId,
+    agentName: 'PricingAgent',
+    decision: 'Fallback calculation',
+    confidence: fallbackPrice.confidenceScore,
+    orchestrationStatus: 'failed_degraded',
+    reasoning: fallbackPrice.breakdown,
   );
 
   return response;

@@ -48,11 +48,13 @@ class SelectedProvider {
   final String providerId;
   final String name;
   final String serviceType;
+  final Map<String, dynamic>? providerMetadata;
 
   SelectedProvider({
     required this.providerId,
     required this.name,
     required this.serviceType,
+    this.providerMetadata,
   });
 
   factory SelectedProvider.fromJson(Map<String, dynamic> json) {
@@ -60,6 +62,7 @@ class SelectedProvider {
       providerId: json['provider_id'] as String,
       name: json['name'] as String? ?? 'Provider',
       serviceType: json['service_type'] as String,
+      providerMetadata: json['metadata'] as Map<String, dynamic>?,
     );
   }
 
@@ -68,6 +71,7 @@ class SelectedProvider {
       'provider_id': providerId,
       'name': name,
       'service_type': serviceType,
+      'metadata': providerMetadata,
     };
   }
 }

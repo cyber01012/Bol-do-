@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'glass_card.dart';
 
 class PriceBreakdown extends StatelessWidget {
+  final double totalPrice;
+  final double confidence;
+  final Map<String, dynamic> breakdown;
   final bool isDarkMode;
 
   const PriceBreakdown({
     super.key,
+    required this.totalPrice,
+    required this.confidence,
+    required this.breakdown,
     required this.isDarkMode,
   });
 
@@ -37,9 +43,9 @@ class PriceBreakdown extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: const Color(0xFF10B981).withOpacity(0.15)),
                 ),
-                child: const Text(
-                  '95% match confidence',
-                  style: TextStyle(
+                child: Text(
+                  '${(confidence * 100).toStringAsFixed(0)}% match confidence',
+                  style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                     color: Color(0xFF10B981),
@@ -49,12 +55,13 @@ class PriceBreakdown extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _buildBreakdownRow('Base Service Rate', 'Rs.500', themePrimaryText, themeSecondaryText),
-          const SizedBox(height: 10),
-          _buildBreakdownRow('Distance Fee', 'Rs.100', themePrimaryText, themeSecondaryText),
-          const SizedBox(height: 10),
-          _buildBreakdownRow('Urgency Calibration', 'Rs.150', themePrimaryText, themeSecondaryText),
-          const Divider(height: 24, thickness: 0.7),
+          ...breakdown.entries.map((e) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildBreakdownRow(e.key, 'Rs.${e.value}', themePrimaryText, themeSecondaryText),
+            );
+          }),
+          const Divider(height: 14, thickness: 0.7),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -66,9 +73,9 @@ class PriceBreakdown extends StatelessWidget {
                   color: themePrimaryText,
                 ),
               ),
-              const Text(
-                'Rs.750',
-                style: TextStyle(
+              Text(
+                'Rs.${totalPrice.toStringAsFixed(0)}',
+                style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w900,
                   color: Color(0xFF10B981),

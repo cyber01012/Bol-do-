@@ -49,21 +49,41 @@ class UserRequest {
 
 class SelectedProvider {
   final String providerId;
+  final String name;
+  final String serviceType;
   final double? distanceKm;
   final String complexity;
+  final Map<String, dynamic>? providerMetadata;
 
   SelectedProvider({
     required this.providerId,
+    required this.name,
+    required this.serviceType,
     this.distanceKm,
     required this.complexity,
+    this.providerMetadata,
   });
 
   factory SelectedProvider.fromJson(Map<String, dynamic> json) {
     return SelectedProvider(
       providerId: json['provider_id'] as String,
+      name: json['name'] as String? ?? '',
+      serviceType: json['service_type'] as String? ?? '',
       distanceKm: (json['distance_km'] as num?)?.toDouble(),
       complexity: json['complexity'] as String? ?? 'basic',
+      providerMetadata: json['metadata'] as Map<String, dynamic>?,
     );
+  }
+  
+  Map<String, dynamic> toJson() {
+    return {
+      'provider_id': providerId,
+      'name': name,
+      'service_type': serviceType,
+      'distance_km': distanceKm,
+      'complexity': complexity,
+      'metadata': providerMetadata,
+    };
   }
 }
 
@@ -83,14 +103,16 @@ class RankingMetadata {
 
 class PricingResponse {
   final String requestId;
+  final String sessionId;
   final String agentTraceId;
   final String orchestrationStatus;
   final bool readyForBooking;
-  final String selectedProvider;
+  final SelectedProvider selectedProvider;
   final PricingData pricingData;
 
   PricingResponse({
     required this.requestId,
+    required this.sessionId,
     required this.agentTraceId,
     required this.orchestrationStatus,
     required this.readyForBooking,
@@ -101,10 +123,11 @@ class PricingResponse {
   Map<String, dynamic> toJson() {
     return {
       'request_id': requestId,
+      'session_id': sessionId,
       'agent_trace_id': agentTraceId,
       'orchestration_status': orchestrationStatus,
       'ready_for_booking': readyForBooking,
-      'selected_provider': selectedProvider,
+      'selected_provider': selectedProvider.toJson(),
       'pricing_data': pricingData.toJson(),
     };
   }

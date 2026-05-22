@@ -2,17 +2,17 @@ import 'dart:math';
 import 'package:boldo_ai/agents/booking_agent/booking_model.dart' show SelectedProvider, CustomerSummary, OrchestrationMetadata;
 import 'firestore_service.dart';
 import 'followup_model.dart';
-import 'trace_logger.dart';
+import '../../services/central_trace_logger.dart';
 
 class FollowUpAgentService {
   final FirestoreService _firestoreService;
-  final TraceLogger _traceLogger;
+  final CentralTraceLogger _traceLogger;
 
   FollowUpAgentService({
     FirestoreService? firestoreService,
-    TraceLogger? traceLogger,
+    CentralTraceLogger? traceLogger,
   })  : _firestoreService = firestoreService ?? FirestoreService(),
-        _traceLogger = traceLogger ?? TraceLogger(firestoreService: firestoreService);
+        _traceLogger = traceLogger ?? CentralTraceLogger();
 
   Future<void> _persistFollowUpDocument({
     required String docId,
@@ -79,17 +79,19 @@ class FollowUpAgentService {
 
         // Log trace for idempotency match
         await _traceLogger.logTrace(
-          request: request,
-          response: response,
           traceId: traceId,
+          sessionId: request.sessionId,
+          userId: request.orchestrationMetadata.requestId,
+          agentName: 'FollowUpAgent',
           decision: 'Idempotency Match: Follow-up engagement already processed.',
           confidence: 1.0,
-          reasoningBreakdown: {
+          orchestrationStatus: request.orchestrationMetadata.orchestrationStatus,
+          reasoning: {
             'idempotency': 'matched',
             'saved_status': existingRecord['status'],
             'skipped_regeneration': true,
+            'generated_followups_count': actions.length,
           },
-          generatedFollowupsCount: actions.length,
         );
 
         return response;
@@ -445,13 +447,17 @@ class FollowUpAgentService {
 
       // Log Trace and update central orchestration status
       await _traceLogger.logTrace(
-        request: request,
-        response: response,
         traceId: traceId,
+        sessionId: request.sessionId,
+        userId: request.orchestrationMetadata.requestId,
+        agentName: 'FollowUpAgent',
         decision: decisionMessage,
         confidence: confidence,
-        reasoningBreakdown: reasoningBreakdown,
-        generatedFollowupsCount: generatedActions.length,
+        orchestrationStatus: request.orchestrationMetadata.orchestrationStatus,
+        reasoning: {
+          ...reasoningBreakdown,
+          'generated_followups_count': generatedActions.length,
+        },
       );
 
       return response;
@@ -488,16 +494,18 @@ class FollowUpAgentService {
 
     // Run async trace log
     _traceLogger.logTrace(
-      request: request,
-      response: response,
       traceId: traceId,
+      sessionId: request.sessionId,
+      userId: request.orchestrationMetadata.requestId,
+      agentName: 'FollowUpAgent',
       decision: 'Catastrophic error in FollowUp Agent. Initiated degraded fallback.',
       confidence: 0.1,
-      reasoningBreakdown: {
+      orchestrationStatus: 'failed_degraded',
+      reasoning: {
         'error': error,
         'status': 'degraded',
+        'generated_followups_count': 0,
       },
-      generatedFollowupsCount: 0,
     );
 
     return response;

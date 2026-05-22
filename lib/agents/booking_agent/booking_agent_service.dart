@@ -3,28 +3,38 @@ import 'booking_model.dart';
 import 'firestore_service.dart';
 import 'idempotency_manager.dart';
 import 'simulated_confirmation_engine.dart';
-import 'trace_logger.dart';
+import '../../services/central_trace_logger.dart';
 
 class BookingAgentService {
   final FirestoreService _firestoreService;
   final IdempotencyManager _idempotencyManager;
   final SimulatedConfirmationEngine _confirmationEngine;
-  final TraceLogger _traceLogger;
+  final CentralTraceLogger _traceLogger;
 
   BookingAgentService({
     FirestoreService? firestoreService,
     IdempotencyManager? idempotencyManager,
     SimulatedConfirmationEngine? confirmationEngine,
-    TraceLogger? traceLogger,
+    CentralTraceLogger? traceLogger,
   })  : _firestoreService = firestoreService ?? FirestoreService(),
         _idempotencyManager = idempotencyManager ?? IdempotencyManager(firestoreService: firestoreService),
         _confirmationEngine = confirmationEngine ?? SimulatedConfirmationEngine(),
-        _traceLogger = traceLogger ?? TraceLogger(firestoreService: firestoreService);
+        _traceLogger = traceLogger ?? CentralTraceLogger();
 
   Future<BookingResponse> processRequest(BookingRequest request) async {
     final traceId = 'trace_book_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(1000)}';
 
     try {
+      // 0. Early Return Protection
+      final activeSessionDoc = await _firestoreService.getDocument('orchestration_sessions', request.sessionId);
+      if (activeSessionDoc != null) {
+        final pipelineStatus = activeSessionDoc['pipeline_status'] as String?;
+        if (pipelineStatus == 'running_bookingagent' || pipelineStatus == 'completed') {
+          print('Booking already processing or completed. Returning early.');
+          return _buildDegradedFallbackResponse(request, traceId, 'Booking already in progress');
+        }
+      }
+
       // 1. Validate Orchestration Session Integrity
       final isSessionValid = await _idempotencyManager.validateSession(request.sessionId);
       final activeSessionId = isSessionValid ? request.sessionId : 'temp_sess_${request.sessionId.hashCode}';
@@ -81,12 +91,14 @@ class BookingAgentService {
 
         // Async log trace
         _traceLogger.logTrace(
-          request: _copyWithActiveSessionAndPrice(request, activeSessionId, activePrice),
-          response: response,
           traceId: traceId,
+          sessionId: activeSessionId,
+          userId: request.requestId,
+          agentName: 'BookingAgent',
           decision: 'Idempotent transaction. Existing booking returned: $bookingId',
           confidence: 1.0,
-          reasoningBreakdown: {
+          orchestrationStatus: response.orchestrationMetadata.orchestrationStatus,
+          reasoning: {
             'idempotency': 'matched',
             'provider_availability': 'skipped_idempotent',
             'slot_simulation': 'skipped_idempotent',
@@ -135,12 +147,14 @@ class BookingAgentService {
         );
 
         _traceLogger.logTrace(
-          request: _copyWithActiveSessionAndPrice(request, activeSessionId, activePrice),
-          response: response,
           traceId: traceId,
+          sessionId: activeSessionId,
+          userId: request.requestId,
+          agentName: 'BookingAgent',
           decision: 'Booking rejected: $failureReason.',
           confidence: 1.0,
-          reasoningBreakdown: {
+          orchestrationStatus: response.orchestrationMetadata.orchestrationStatus,
+          reasoning: {
             'idempotency': 'clear',
             'provider_availability': checkResult.state == BookingCheckState.providerUnavailable ? 'unavailable' : 'active',
             'slot_simulation': checkResult.state == BookingCheckState.providerDoubleBookedConflict ? 'blocked_conflict' : 'not_started',
@@ -220,12 +234,14 @@ class BookingAgentService {
 
         // Async log trace
         _traceLogger.logTrace(
-          request: _copyWithActiveSessionAndPrice(request, activeSessionId, activePrice),
-          response: response,
           traceId: traceId,
+          sessionId: activeSessionId,
+          userId: request.requestId,
+          agentName: 'BookingAgent',
           decision: 'Booking successfully confirmed by provider.',
           confidence: simResult.confidenceScore,
-          reasoningBreakdown: {
+          orchestrationStatus: response.orchestrationMetadata.orchestrationStatus,
+          reasoning: {
             'idempotency': 'clear',
             'provider_availability': 'verified_active',
             'slot_simulation': 'confirmed',
@@ -267,12 +283,14 @@ class BookingAgentService {
         );
 
         _traceLogger.logTrace(
-          request: _copyWithActiveSessionAndPrice(request, activeSessionId, activePrice),
-          response: response,
           traceId: traceId,
+          sessionId: activeSessionId,
+          userId: request.requestId,
+          agentName: 'BookingAgent',
           decision: 'Booking declined by provider during simulation.',
           confidence: simResult.confidenceScore,
-          reasoningBreakdown: {
+          orchestrationStatus: response.orchestrationMetadata.orchestrationStatus,
+          reasoning: {
             'idempotency': 'clear',
             'provider_availability': 'verified_active',
             'slot_simulation': 'declined',
@@ -421,12 +439,14 @@ class BookingAgentService {
 
     // Attempt to log failure trace
     _traceLogger.logTrace(
-      request: request,
-      response: response,
       traceId: traceId,
+      sessionId: request.sessionId,
+      userId: request.requestId,
+      agentName: 'BookingAgent',
       decision: 'Catastrophic error triggered fallback execution.',
       confidence: 0.1,
-      reasoningBreakdown: {
+      orchestrationStatus: response.orchestrationMetadata.orchestrationStatus,
+      reasoning: {
         'error': error,
         'status': 'degraded',
       },

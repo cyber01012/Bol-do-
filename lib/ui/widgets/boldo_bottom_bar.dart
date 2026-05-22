@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../screens/ranking_logs_screen.dart';
+import '../../screens/profile/profile_screen.dart';
 import '../../main.dart';
 
 class BolDoBottomBar extends StatelessWidget {
@@ -82,8 +83,9 @@ class BolDoBottomBar extends StatelessWidget {
                       themeSecondaryText: themeSecondaryText,
                       onTap: () {
                         HapticFeedback.lightImpact();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('User Profile coming soon.')),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ProfileScreen()),
                         );
                       },
                     ),

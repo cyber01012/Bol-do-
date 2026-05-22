@@ -5,6 +5,7 @@ import '../widgets/glass_card.dart';
 import '../widgets/boldo_app_bar.dart';
 import '../widgets/boldo_bottom_bar.dart';
 import '../../main.dart';
+import '../../screens/booking/pricing_screen.dart';
 
 class ProviderDetailScreen extends StatelessWidget {
   final Provider provider;
@@ -169,11 +170,20 @@ class ProviderDetailScreen extends StatelessWidget {
             // Booking Action Button
             ElevatedButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Booking request initiated for ${provider.name}!'),
-                    backgroundColor: BolDoTheme.primary,
-                    duration: const Duration(seconds: 2),
+                final sessionId = 'sess_${DateTime.now().millisecondsSinceEpoch}';
+                final requestId = 'req_$sessionId';
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PricingScreen(
+                      provider: provider,
+                      sessionId: sessionId,
+                      requestId: requestId,
+                      userId: 'user_customer_999',
+                      serviceType: provider.serviceType,
+                      isDarkMode: Theme.of(context).brightness == Brightness.dark,
+                    ),
                   ),
                 );
               },

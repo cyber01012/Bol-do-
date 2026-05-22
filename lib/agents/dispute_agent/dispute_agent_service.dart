@@ -2,21 +2,21 @@ import 'dart:math';
 import 'dart:developer' as developer;
 import 'dispute_model.dart';
 import 'firestore_service.dart';
-import 'trace_logger.dart';
+import '../../services/central_trace_logger.dart';
 
 /// Enterprise-grade service that handles dispute processing for bookings.
 /// Coordinates input validation, idempotency checks, categorization, severity checks,
 /// penalty assignment, escalation checks, Firestore persistence, and trace logging.
 class DisputeAgentService {
   final FirestoreService _firestoreService;
-  final TraceLogger _traceLogger;
+  final CentralTraceLogger _traceLogger;
 
   /// Default constructor allowing dependency injection of services.
   DisputeAgentService({
     FirestoreService? firestoreService,
-    TraceLogger? traceLogger,
+    CentralTraceLogger? traceLogger,
   })  : _firestoreService = firestoreService ?? FirestoreService(),
-        _traceLogger = traceLogger ?? TraceLogger(firestoreService: firestoreService);
+        _traceLogger = traceLogger ?? CentralTraceLogger();
 
   /// Main entry point to process a dispute request.
   /// Runs deterministically to detect category, severity, penalty, refund rate,
@@ -38,17 +38,19 @@ class DisputeAgentService {
 
         // Async trace log for the idempotency match
         await _traceLogger.logTrace(
-          request: request,
-          response: response,
           traceId: traceId,
-          confidence: 1.0,
+          sessionId: request.sessionId,
+          userId: request.requestId,
+          agentName: 'DisputeAgent',
           decision: 'Idempotency Match: dispute already processed for this session.',
-          reasoningBreakdown: {
+          confidence: 1.0,
+          orchestrationStatus: response.orchestrationStatus,
+          reasoning: {
             'idempotency': 'matched',
             'saved_status': response.disputeCase.status,
             'skipped_recalculation': true,
+            'escalation_level': response.escalationMetadata.riskLevel,
           },
-          escalationLevel: response.escalationMetadata.riskLevel,
         );
 
         return response;
@@ -137,14 +139,16 @@ class DisputeAgentService {
 
       // 10. Trace Logging
       await _traceLogger.logTrace(
-        request: request,
-        response: response,
         traceId: traceId,
-        confidence: confidenceScore,
+        sessionId: request.sessionId,
+        userId: request.requestId,
+        agentName: 'DisputeAgent',
         decision: orchestrationStatus == 'escalated'
             ? 'Dispute escalated to support tier due to high severity rating.'
             : 'Dispute auto-resolved with recommendation action.',
-        reasoningBreakdown: {
+        confidence: confidenceScore,
+        orchestrationStatus: orchestrationStatus,
+        reasoning: {
           'idempotency': 'clear',
           'rating_score': request.rating,
           'severity_level': severity,
@@ -152,8 +156,8 @@ class DisputeAgentService {
           'refund_percentage': refundPercentage,
           'penalty_score': providerPenalty,
           'is_escalated': escalationMetadata.isEscalated,
+          'escalation_level': severity,
         },
-        escalationLevel: severity,
       );
 
       return response;
@@ -350,16 +354,18 @@ class DisputeAgentService {
 
     // Safely attempt trace logging
     _traceLogger.logTrace(
-      request: request,
-      response: response,
       traceId: traceId,
-      confidence: 0.5,
+      sessionId: request.sessionId,
+      userId: request.requestId,
+      agentName: 'DisputeAgent',
       decision: 'Catastrophic error triggered degraded fallback mode.',
-      reasoningBreakdown: {
+      confidence: 0.5,
+      orchestrationStatus: 'failed_degraded',
+      reasoning: {
         'error': errorMessage,
         'fallback': true,
+        'escalation_level': 'degraded',
       },
-      escalationLevel: 'degraded',
     ).catchError((e) {
       print('TraceLogger failed during fallback logging: $e');
     });

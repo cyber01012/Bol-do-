@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme.dart';
 import '../../main.dart';
+import '../../screens/booking/notification_screen.dart';
 
 class BolDoAppBar extends StatelessWidget implements PreferredSizeWidget {
   const BolDoAppBar({super.key});
@@ -52,13 +53,42 @@ class BolDoAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
             Padding(
               padding: const EdgeInsets.only(top: 12.0),
-              child: IconButton(
-                icon: const Icon(Icons.notifications_none_rounded, color: BolDoTheme.textSecondary, size: 22),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Notifications dashboard coming soon.')),
-                  );
-                },
+              child: Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_none_rounded, color: BolDoTheme.textSecondary, size: 22),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        PageRouteBuilder(
+                          pageBuilder: (context, animation, secondaryAnimation) => NotificationScreen(
+                            isDarkMode: isDarkMode,
+                            sessionId: 'sess_global_001',
+                            bookingId: 'global_notifs',
+                          ),
+                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                            return FadeTransition(opacity: animation, child: child);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEC4899),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Text(
+                        '1',
+                        style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             Padding(

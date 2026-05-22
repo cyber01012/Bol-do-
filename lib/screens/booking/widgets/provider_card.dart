@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'glass_card.dart';
 
 class ProviderCard extends StatelessWidget {
+  final String providerName;
+  final String serviceType;
+  final double rating;
   final bool isDarkMode;
 
   const ProviderCard({
     super.key,
+    required this.providerName,
+    required this.serviceType,
+    required this.rating,
     required this.isDarkMode,
   });
 
@@ -41,7 +47,7 @@ class ProviderCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Ali Electric Works',
+                      providerName,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -53,7 +59,7 @@ class ProviderCard extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          'Electrician',
+                          serviceType,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -97,7 +103,7 @@ class ProviderCard extends StatelessWidget {
                     const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
                     const SizedBox(width: 4),
                     Text(
-                      '4.8',
+                      rating.toStringAsFixed(1),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w900,

@@ -30,13 +30,13 @@ class TracePreviewCard extends StatelessWidget {
     final themeSecondaryText = isDark ? const Color(0xFF9EA3B0) : const Color(0xFF6B7280);
 
     final traceId = traceData['trace_id'] as String? ?? 'N/A';
-    final agent = traceData['agent'] as String? ?? traceData['current_agent'] as String? ?? 'Agent';
+    final agent = traceData['agent_name'] as String? ?? traceData['agent'] as String? ?? traceData['current_agent'] as String? ?? 'Agent';
     final decision = traceData['decision'] as String? ?? 'No decision logged';
     final confidence = (traceData['confidence'] as num?)?.toDouble() ?? 1.0;
     final timestamp = traceData['timestamp'] as String? ?? '';
     final sessionId = traceData['session_id'] as String? ?? 'N/A';
     final inputs = traceData['inputs'] as Map? ?? {};
-    final breakdown = traceData['reasoning_breakdown'];
+    final breakdown = traceData['reasoning'] ?? traceData['reasoning_breakdown'];
 
     String formattedBreakdown = '';
     if (breakdown is Map) {
@@ -372,11 +372,11 @@ class TracePreviewCard extends StatelessWidget {
     final themePrimaryText = isDark ? Colors.white : const Color(0xFF1E2025);
     final themeSecondaryText = isDark ? const Color(0xFF9EA3B0) : const Color(0xFF6B7280);
 
-    final agent = traceData['agent'] as String? ?? traceData['current_agent'] as String? ?? 'Agent';
+    final agent = traceData['agent_name'] as String? ?? traceData['agent'] as String? ?? traceData['current_agent'] as String? ?? 'Agent';
     final decision = traceData['decision'] as String? ?? 'No decision logged';
     final confidence = (traceData['confidence'] as num?)?.toDouble() ?? 1.0;
     final timestamp = traceData['timestamp'] as String? ?? '';
-    final reasoning = traceData['reasoning_breakdown'];
+    final reasoning = traceData['reasoning'] ?? traceData['reasoning_breakdown'];
 
     String reasoningPreview = 'No detailed breakdown.';
     if (reasoning is Map) {
